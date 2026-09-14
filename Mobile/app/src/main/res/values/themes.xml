@@ -1,0 +1,8 @@
+<resources>
+    <color name="background">#0B0D12</color>
+    <color name="launcher">#141821</color>
+
+    <style name="Tarifa" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/background</item>
+    </style>
+</resources>
