@@ -99,9 +99,9 @@ class ParityTest {
     @Test
     fun alerts() {
         val route = Route(-1, "", "", 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, "America/Sao_Paulo")
-        Tracker.baselines[route.id] = 100.0 to "10:00"
-        Tracker.levels[route.id] = 0
-        assertEquals(listOf("good", "good", "bad", "bad"), listOf(95.0, 89.0, 85.0, 79.0, 88.0, 105.0, 111.0, 125.0).mapNotNull { Tracker.check(route, it) })
+        Tracker.baselines[route.id to "uber"] = 100.0 to "10:00"
+        Tracker.levels[route.id to "uber"] = 0
+        assertEquals(listOf("good", "good", "bad", "bad"), listOf(95.0, 89.0, 85.0, 79.0, 88.0, 105.0, 111.0, 125.0).mapNotNull { Tracker.check(route, "uber", it) })
     }
 
     // SORTEIOS DO ORACULO: RUIDO E JITTER EXATOS; O ACIDENTE PODE DIFERIR NA ULTIMA CASA PELA ORDEM DA SOMA DO NUMPY
@@ -128,7 +128,7 @@ class ParityTest {
         val frame = item.getJSONObject("frame")
         val ts    = getLongs(frame.getJSONArray("ts"))
         val clock = getClock(ts, "America/Sao_Paulo")
-        val X     = Array(ts.size) { i -> doubleArrayOf(clock.hour[i], clock.weekday[i].toDouble(), *listOf("distance", "duration", "corridor", "rain").map { frame.getJSONArray(it).getDouble(i) }.toDoubleArray()) }
+        val X     = Array(ts.size) { i -> doubleArrayOf(clock.hour[i], clock.weekday[i].toDouble(), *listOf("distance", "duration", "corridor", "rain", "company").map { frame.getJSONArray(it).getDouble(i) }.toDoubleArray()) }
         var worst = 0.0
 
         for (column in Model.TARGETS.keys) {
@@ -155,7 +155,7 @@ class ParityTest {
         for (i in 0 until cases.length()) {
             val case = cases.getJSONObject(i)
             val obs  = case.getJSONObject("obs")
-            val out  = Model.get(getRoute(case.getJSONObject("route")), getLongs(case.getJSONArray("ts")), getDoubles(case.getJSONArray("rain")), Obs(getLongs(obs.getJSONArray("ts")), getDoubles(obs.getJSONArray("rain")), mapOf("price" to getDoubles(obs.getJSONArray("price")), "minutes" to getDoubles(obs.getJSONArray("minutes")))))!!
+            val out  = Model.get(getRoute(case.getJSONObject("route")), getLongs(case.getJSONArray("ts")), getDoubles(case.getJSONArray("rain")), Obs(getLongs(obs.getJSONArray("ts")), getDoubles(obs.getJSONArray("rain")), mapOf("price" to getDoubles(obs.getJSONArray("price")), "minutes" to getDoubles(obs.getJSONArray("minutes")))), case.getString("company"))!!
 
             for ((key, values) in out) getDoubles(case.getJSONObject("out").getJSONArray(key)).forEachIndexed { k, value -> worst = maxOf(worst, abs(value - values[k])) }
         }
@@ -175,7 +175,13 @@ class ParityTest {
             val weather = case.getJSONObject("weather")
             val today   = case.getJSONObject("today")
             val out     = case.getJSONObject("out")
-            val series  = Engine.getSeries(getRoute(case.getJSONObject("route")), case.getLong("now"), Weather(getDoubles(weather.getJSONArray("ts")), getDoubles(weather.getJSONArray("rain")), getDoubles(weather.getJSONArray("probability"))), Obs(getLongs(today.getJSONArray("ts")), getDoubles(today.getJSONArray("rain")), mapOf("price" to getDoubles(today.getJSONArray("price")), "minutes" to getDoubles(today.getJSONArray("minutes")))))!!
+            val route   = getRoute(case.getJSONObject("route"))
+            val company = case.getString("company")
+            val minutes = getDoubles(today.getJSONArray("minutes"))
+            val excess  = getDoubles(today.getJSONArray("excess"))
+            val noise   = getDoubles(today.getJSONArray("noise"))
+            val price   = DoubleArray(minutes.size) { Oracle.getPrice(route.distance, minutes[it], excess[it], noise[it], company) }
+            val series  = Engine.getSeries(route, case.getLong("now"), Weather(getDoubles(weather.getJSONArray("ts")), getDoubles(weather.getJSONArray("rain")), getDoubles(weather.getJSONArray("probability"))), Obs(getLongs(today.getJSONArray("ts")), getDoubles(today.getJSONArray("rain")), mapOf("price" to price, "minutes" to minutes)), company)!!
 
             assertTrue(getLongs(out.getJSONArray("ts")).contentEquals(series.ts))
             assertTrue(getDoubles(out.getJSONArray("rain")).contentEquals(series.rain))
@@ -186,7 +192,7 @@ class ParityTest {
         }
     }
 
-    // PRECO E TEMPO DO ORACULO IGUAIS AO CENTAVO E AO DECIMO DE MINUTO EM MILHARES DE INSTANTES, ROTAS, FUSOS E CHUVAS
+    // ESTADO, PRECO E TEMPO DO ORACULO IGUAIS AO CENTAVO E AO DECIMO DE MINUTO EM MILHARES DE INSTANTES, ROTAS, FUSOS, CHUVAS E NOS DOIS APLICATIVOS
     @Test
     fun market() {
         val cases = golden.getJSONArray("market")
@@ -194,9 +200,48 @@ class ParityTest {
         for (i in 0 until cases.length()) {
             val case  = cases.getJSONObject(i)
             val route = getRoute(case.getJSONObject("route"))
-            val (price, minutes) = Oracle.getMarket(route, getLongs(case.getJSONArray("ts")), getDoubles(case.getJSONArray("rain")))
+            val ts    = getLongs(case.getJSONArray("ts"))
+            val rain  = getDoubles(case.getJSONArray("rain"))
+            val state = Oracle.getState(route, ts, rain)
+            val (price, minutes) = Oracle.getMarket(route, ts, rain, case.getString("company"))
+            getDoubles(case.getJSONArray("excess")).forEachIndexed { k, value -> assertEquals(value, state.excess[k], 1e-12) }    // o excesso carrega o acidente, que pode diferir na ultima casa pela ordem da soma do numpy
+            assertTrue(getDoubles(case.getJSONArray("noise")).contentEquals(state.noise))
             assertTrue(getDoubles(case.getJSONArray("price")).contentEquals(price))
             assertTrue(getDoubles(case.getJSONArray("minutes")).contentEquals(minutes))
         }
+    }
+
+    // TARIFA, DINAMICA E PRECO DE CADA APLICATIVO IGUAIS AOS DO DESKTOP EM DISTANCIAS, TEMPOS E DEMANDAS DE TODA ORDEM
+    @Test
+    fun tariff() {
+        val cases = golden.getJSONArray("tariff")
+
+        for (i in 0 until cases.length()) {
+            val case    = cases.getJSONObject(i)
+            val company = case.getString("company")
+            assertEquals(case.getDouble("tariff"), Oracle.getTariff(case.getDouble("distance"), case.getDouble("duration"), case.getDouble("surge"), company), 0.0)
+            assertEquals(case.getDouble("surged"), Oracle.getSurge(case.getDouble("excess"), case.getDouble("noise"), company), 0.0)
+            assertEquals(case.getDouble("price"), Oracle.getPrice(case.getDouble("distance"), case.getDouble("duration"), case.getDouble("excess"), case.getDouble("noise"), company), 0.0)
+        }
+    }
+
+    // TARIFA AJUSTADA AOS PRECOS REAIS INFORMADOS: A MESMA TABELA QUE O DESKTOP PRODUZ, DA PRIMEIRA OBSERVACAO AO PRECO ABSURDO QUE E LIMITADO
+    @Test
+    fun fares() {
+        val cases = golden.getJSONArray("fares")
+
+        for (i in 0 until cases.length()) {
+            val case  = cases.getJSONObject(i)
+            val items = case.getJSONArray("rides")
+            Oracle.update(List(items.length()) { items.getJSONObject(it) }.map { Ride(it.getString("company"), it.getDouble("distance"), it.getDouble("minutes"), it.getDouble("surge"), it.getDouble("observed")) })
+
+            for (company in COMPANIES.keys) {
+                val found = case.getJSONObject("fares").getJSONObject(company)
+                val fare  = Oracle.getFare(company)
+                listOf("base" to fare.base, "km" to fare.km, "minute" to fare.minute, "fee" to fare.fee, "floor" to fare.floor, "surge" to fare.surge, "cap" to fare.cap).forEach { (key, value) -> assertEquals("$company.$key no caso $i", found.getDouble(key), value, 1e-9) }
+            }
+        }
+
+        Oracle.update(emptyList())
     }
 }

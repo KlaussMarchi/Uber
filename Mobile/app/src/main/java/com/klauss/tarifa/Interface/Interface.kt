@@ -14,11 +14,13 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,10 +30,15 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -41,7 +48,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -92,6 +102,9 @@ class Interface : ComponentActivity() {
     val origin      = Search("ORIGEM", "Endereço de partida")
     val destination = Search("DESTINO", "Endereço de destino")
     val chart       = Chart()
+    var company by mutableStateOf(COMPANIES.keys.first())
+    var fare    by mutableStateOf("")
+    var note    by mutableStateOf("")
     var busy    by mutableStateOf(false)
     var message by mutableStateOf("")
     var failed  by mutableStateOf(false)
@@ -109,7 +122,10 @@ class Interface : ComponentActivity() {
         enableEdgeToEdge(SystemBarStyle.dark(android.graphics.Color.TRANSPARENT), SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
         Database.setup(this)
 
-        lifecycleScope.launch(Dispatchers.Default) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            Engine.setup()
+            note = getHint()
+
             try {
                 Model.setup(assets.open("model.json").bufferedReader().use { it.readText() })
             } catch (err: Exception) {
@@ -169,7 +185,7 @@ class Interface : ComponentActivity() {
         lifecycleScope.launch {
             val quote = withContext(Dispatchers.IO) {
                 try {
-                    Engine.getQuote(src, dst)
+                    Engine.getQuote(src, dst, company)
                 } catch (err: Exception) {
                     Log.e("Interface", "consulta falhou", err)
                     Quote(error = "Falha inesperada na consulta; tente de novo.")
@@ -244,9 +260,62 @@ class Interface : ComponentActivity() {
         origin.set(quote.src!!)
         destination.set(quote.dst!!)
         chart.index = null
-        Tracker.start(this, quote.route!!, quote.series!!)
+        Tracker.start(this, quote.route!!, quote.series!!, company)
 
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) alerts.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    // TROCA DE APLICATIVO: A ROTA NA TELA E RECALCULADA COM A TARIFA E A DINAMICA DO ESCOLHIDO
+    fun handleCompany(chosen: String) {
+        company = chosen
+        note    = getHint()
+        val current = tick ?: return
+
+        lifecycleScope.launch {
+            val series = withContext(Dispatchers.IO) { Engine.get(current.route, chosen) }
+            if (series != null && chosen == company) Tracker.start(this@Interface, current.route, series, chosen)
+        }
+    }
+
+    // PRECO REAL LIDO NO APLICATIVO: AJUSTA A TARIFA DELE E RECALCULA A SERIE; ZERO APAGA A CALIBRACAO
+    fun handleFare() {
+        val current = tick
+        val chosen  = company
+        val typed   = fare.trim().removePrefix("R$").trim()
+        val value   = (if (',' in typed) typed.replace(".", "").replace(",", ".") else typed).toDoubleOrNull()    // 1.234,56 e 1234.56 valem o mesmo
+
+        if (current == null || value == null || value < 0) {
+            message = "Calcule um preço e informe o valor real do aplicativo, como 54,85 (0 apaga a calibração)."
+            failed  = true
+            return
+        }
+
+        fare    = ""
+        message = "Calibrando a tarifa…"
+        failed  = false
+
+        lifecycleScope.launch {
+            val count = withContext(Dispatchers.IO) { Engine.setFare(current.route, chosen, value) }
+
+            if (count < 0) {
+                message = "Não foi possível calibrar agora: a previsão desta rota está indisponível."
+                failed  = true
+                return@launch
+            }
+
+            val series = withContext(Dispatchers.IO) { Engine.get(current.route, company) }
+            Tracker.reset(current.route, chosen)
+            note    = getHint()
+            message = if (count > 0) "Tarifa da ${COMPANIES.getValue(chosen)} ajustada a $count preço(s) informado(s)." else "Calibração da ${COMPANIES.getValue(chosen)} apagada: voltou à tabela publicada."
+            if (series != null) Tracker.start(this@Interface, current.route, series, company)
+        }
+    }
+
+    // ORIGEM DA TARIFA EM USO, SOB O CAMPO DE PRECO REAL
+    fun getHint(): String {
+        val fare  = Oracle.getFare(company)
+        val state = if (fare == Oracle.TARIFFS.getValue(company)) "tabela publicada" else "calibrada em R$ ${getFixed(fare.km, 2)}/km e R$ ${getFixed(fare.minute, 2)}/min"
+        return "Tarifa ${COMPANIES.getValue(company)}: $state"
     }
 
     // PONTO ESCOLHIDO NO MAPA OU NA LISTA: VIRA O ENDERECO DO CAMPO
@@ -272,6 +341,15 @@ class Interface : ComponentActivity() {
             Text(status, color = COLORS.secondary, fontSize = 12.sp)
 
             showPanel {
+                Row(Modifier.fillMaxWidth().background(COLORS.input, RoundedCornerShape(10.dp)).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    for ((key, name) in COMPANIES) {
+                        Button(onClick = { handleCompany(key) }, modifier = Modifier.weight(1f).height(42.dp), shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(0.dp), colors = ButtonDefaults.buttonColors(containerColor = if (key == company) COLORS.button else COLORS.input, contentColor = if (key == company) Color.White else COLORS.muted)) {
+                            Text(name, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Text(note, color = COLORS.muted, fontSize = 11.sp)
                 origin.show(::getForecast) { getLocation(origin) }
                 destination.show(::getForecast) { getLocation(destination) }
 
@@ -291,7 +369,7 @@ class Interface : ComponentActivity() {
                 chart.show(current)
             }
 
-            Text("Preços do oráculo sintético calibrado; endereços (OpenStreetMap), rotas (OSRM) e clima (Open-Meteo) são dados reais.", color = COLORS.muted, fontSize = 11.sp)
+            Text("Preços simulados sobre a tarifa de cada aplicativo; informe o preço real do app para calibrar. Endereços (OpenStreetMap), rotas (OSRM) e clima (Open-Meteo) são dados reais.", color = COLORS.muted, fontSize = 11.sp)
         }
 
         locator?.show()
@@ -308,7 +386,7 @@ class Interface : ComponentActivity() {
         val low    = view.minBy { bands.getValue("p50")[it] }
         val worst  = view.maxBy { bands.getValue("m50")[it] }
         val clock  = { i: Int -> getLocal(series.ts[i], route.tz).format(Chart.HHMM) }
-        val (way, change) = Tracker.getChange(route, series.price)
+        val (way, change) = Tracker.getChange(route, tick.company, series.price)
         val color  = listOf(COLORS.price, COLORS.text, COLORS.error)[way + 1]
 
         val values = mapOf(
@@ -324,7 +402,7 @@ class Interface : ComponentActivity() {
 
         showPanel {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("PREÇO AGORA", color = COLORS.muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("PREÇO AGORA · ${COMPANIES.getValue(tick.company)}", color = COLORS.muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 Text("●", color = if (live) COLORS.success else COLORS.muted, fontSize = 12.sp)
                 Spacer(Modifier.width(6.dp))
                 Text(if (live) "tempo real · ${Tracker.SYNC / 1000} s" else "tempo real pausado", color = COLORS.muted, fontSize = 12.sp)
@@ -334,6 +412,25 @@ class Interface : ComponentActivity() {
                 Text(getMoney(series.price), color = color, fontSize = 40.sp, fontWeight = FontWeight.Bold)
                 Text("$change · atualizado ${tick.at}", color = color, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 Text("próximos 10 min entre ${getMoney(bands.getValue("p10")[1])} e ${getMoney(bands.getValue("p90")[1])} · viagem de ${getSpan(bands.getValue("m10")[1], bands.getValue("m90")[1])}", color = COLORS.secondary, fontSize = 12.sp)
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value           = fare,
+                    onValueChange   = { fare = it },
+                    modifier        = Modifier.weight(1f),
+                    singleLine      = true,
+                    placeholder     = { Text("preço real no app", color = COLORS.muted, fontSize = 14.sp) },
+                    textStyle       = TextStyle(color = COLORS.text, fontSize = 14.sp),
+                    shape           = RoundedCornerShape(8.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { handleFare() }),
+                    colors          = OutlinedTextFieldDefaults.colors(focusedContainerColor = COLORS.input, unfocusedContainerColor = COLORS.input, focusedBorderColor = COLORS.button, unfocusedBorderColor = COLORS.border, cursorColor = COLORS.text, focusedTextColor = COLORS.text, unfocusedTextColor = COLORS.text),
+                )
+
+                OutlinedButton(onClick = ::handleFare, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, COLORS.border), colors = ButtonDefaults.outlinedButtonColors(containerColor = COLORS.input, contentColor = COLORS.text)) {
+                    Text("Calibrar", fontWeight = FontWeight.Bold)
+                }
             }
 
             for (row in STATS.chunked(2)) {

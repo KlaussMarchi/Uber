@@ -4,7 +4,7 @@ from time import time
 from Api.index import api
 from Database.index import database
 from Model.index import model
-from Oracle.index import getMarket
+from Oracle.index import getPrice, getState, getSurge, update
 from Utils.functions import getClock, getDistance
 from Utils.variables import STEP, HORIZON
 
@@ -16,6 +16,10 @@ class Engine:
 
     def __init__(self):
         self.weather = {}
+
+    # TARIFA DE CADA APLICATIVO A PARTIR DOS PRECOS REAIS JA INFORMADOS; SEM NENHUM, VALE A TABELA PUBLICADA
+    def setup(self):
+        update(database.get('SELECT company, distance, minutes, surge, observed FROM Fares ORDER BY ts'))
 
     # ROTA COM CACHE NO BANCO E FUSO DA ORIGEM; MARCA O USO PORQUE O WORKER OBSERVA AS ROTAS MAIS RECENTES
     def getRoute(self, src, dst):
@@ -54,7 +58,7 @@ class Engine:
         self.weather[key] = hit
         return hit[1]
 
-    def get(self, route, now=None):
+    def get(self, route, company='uber', now=None):
         now     = int(time() if now is None else now)
         ts      = np.append(now, np.arange((now // STEP + 1) * STEP, now + HORIZON + 1, STEP))
         weather = self.getWeather(route['o_lat'], route['o_lon'])
@@ -63,17 +67,41 @@ class Engine:
         if weather is None or weather['ts'].max() < ts[-1] or not model.ready():
             return None
 
-        rain     = np.interp(ts, weather['ts'], weather['rain'])
-        price, minutes = [float(value[0]) for value in getMarket(route, [now], rain[:1])]
+        rain  = np.interp(ts, weather['ts'], weather['rain'])
+        excess, noise, minutes = [float(value[0]) for value in getState(route, ts[:1], rain[:1])]
+        price = float(getPrice(route['distance'], minutes, excess, noise, company))
+        today = self.getToday(route, company, now)
+        obs   = pd.concat([today, pd.DataFrame({'ts': [now], 'rain': [rain[0]], 'price': [price], 'minutes': [minutes]})], ignore_index=True).astype({'ts': 'int64', 'rain': 'float64', 'price': 'float64', 'minutes': 'float64'})
+        grid  = pd.DataFrame({'ts': ts, 'rain': rain})
+        blank = [np.nan] * (len(ts) - 1)
+        return pd.concat([grid, model.get(route, grid, obs, company)], axis=1).assign(probability=np.interp(ts, weather['ts'], weather['probability']), price=[price] + blank, minutes=[minutes] + blank, excess=[excess] + blank, noise=[noise] + blank)
+
+    # OBSERVACOES DE HOJE DA ROTA: O BANCO GUARDA O ESTADO DO MERCADO E O PRECO SAI DA TARIFA DO APLICATIVO ESCOLHIDO
+    def getToday(self, route, company, now):
         midnight = pd.Timestamp(getClock([now], route['tz'])[2][0]).tz_localize(route['tz'], nonexistent='shift_forward').timestamp()
-        today    = database.get('SELECT ts, rain, price, minutes FROM Prices WHERE route_id = ? AND ts >= ? AND ts < ? ORDER BY ts', (route['id'], int(midnight), now // STEP * STEP))
-        obs      = pd.concat([today, pd.DataFrame({'ts': [now], 'rain': [rain[0]], 'price': [price], 'minutes': [minutes]})], ignore_index=True).astype({'ts': 'int64', 'rain': 'float64', 'price': 'float64', 'minutes': 'float64'})
-        grid     = pd.DataFrame({'ts': ts, 'rain': rain})
-        blank    = [np.nan] * (len(ts) - 1)
-        return pd.concat([grid, model.get(route, grid, obs)], axis=1).assign(probability=np.interp(ts, weather['ts'], weather['probability']), price=[price] + blank, minutes=[minutes] + blank)
+        today    = database.get('SELECT ts, rain, excess, noise, minutes FROM Prices WHERE route_id = ? AND ts >= ? AND ts < ? ORDER BY ts', (route['id'], int(midnight), now // STEP * STEP))
+        return pd.DataFrame({'ts': today['ts'], 'rain': today['rain'], 'price': getPrice(route['distance'], today['minutes'], today['excess'], today['noise'], company), 'minutes': today['minutes']})
+
+    # PRECO REAL LIDO NO APLICATIVO: GUARDA A OBSERVACAO COM O ESTADO DO MERCADO DAQUELE INSTANTE E REAJUSTA A TARIFA; ZERO APAGA A CALIBRACAO DO APLICATIVO
+    def setFare(self, route, company, observed, now=None):
+        now = int(time() if now is None else now)
+
+        if observed <= 0:
+            database.set('DELETE FROM Fares WHERE company = ?', [(company,)])
+        else:
+            df = self.get(route, company, now)
+
+            if df is None:
+                return None
+
+            row = df.iloc[0]
+            database.set('INSERT INTO Fares (company, ts, distance, minutes, surge, observed) VALUES (?, ?, ?, ?, ?, ?)', [(company, now, route['distance'], float(row['minutes']), float(getSurge(row['excess'], row['noise'], company)), float(observed))])
+
+        self.setup()
+        return database.get('SELECT COUNT(*) AS n FROM Fares WHERE company = ?', (company,))['n'][0]
 
     # CONSULTA COMPLETA: VALIDA OS ENDERECOS, TRACA A ROTA E PREVE; QUANDO UMA ETAPA FALHA DEVOLVE O MOTIVO PARA A TELA
-    def getQuote(self, src, dst, now=None):
+    def getQuote(self, src, dst, company='uber', now=None):
         if not model.ready():
             return {'error': 'Modelo em preparação: a previsão aparece assim que o primeiro treino terminar.'}
 
@@ -95,12 +123,12 @@ class Engine:
         if route is None:
             return {'error': 'Sem rota de carro entre esses pontos (ilha, mar ou via inacessível) ou OSRM/Open-Meteo fora do ar.'}
 
-        df = self.get(route, now)
+        df = self.get(route, company, now)
 
         if df is None:
             return {'error': 'Previsão do tempo indisponível (Open-Meteo), tente novamente em instantes.'}
 
-        return {'src': src, 'dst': dst, 'route': route, 'df': df}
+        return {'src': src, 'dst': dst, 'route': route, 'company': company, 'df': df}
 
 
 engine = Engine()

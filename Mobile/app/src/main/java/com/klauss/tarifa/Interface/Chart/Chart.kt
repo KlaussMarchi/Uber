@@ -145,7 +145,7 @@ class Chart {
         val clock   = { t: Long -> getLocal(t, route.tz).format(HHMM) }
 
         // sem legenda: o titulo de cada painel diz o que ele mostra e os rotulos ficam direto nas marcas
-        for ((top, text, detail) in listOf(Triple(tops[0], "Preço da corrida", "previsto (p50) e faixa p10–p90"), Triple(tops[1], "Chuva prevista", "chance por hora e intensidade"), Triple(tops[3], "Tempo de viagem previsto", "previsto (m50) e faixa m10–m90"))) {
+        for ((top, text, detail) in listOf(Triple(tops[0], "Preço da corrida · ${COMPANIES.getValue(tick.company)}", "previsto (p50) e faixa p10–p90"), Triple(tops[1], "Chuva prevista", "chance por hora e intensidade"), Triple(tops[3], "Tempo de viagem previsto", "previsto (m50) e faixa m10–m90"))) {
             showText(measurer, text, left, top - 4.dp.toPx(), COLORS.text, 12.sp, valign = 1f, bold = true)
             showText(measurer, detail, right, top - 4.dp.toPx(), COLORS.muted, 10.sp, align = 1f, valign = 1f)
         }

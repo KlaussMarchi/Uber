@@ -50,6 +50,7 @@ class Tree(val feature: IntArray, val threshold: DoubleArray, val decision: IntA
 object Model {
     val QUANTILES = listOf("10", "50", "90")
     val TARGETS   = mapOf("price" to "p", "minutes" to "m")
+    val FEATURES  = listOf("hour", "weekday", "distance", "duration", "corridor", "rain", "company")
     val RAIN_GRID = doubleArrayOf(0.0, 0.5, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0)    // mm/h, grade do rearranjo monotono
     val REGIMES   = intArrayOf(1, 2, 6)                                         // observacoes de hoje que abrem cada regime: rota nova, rastreada ha menos de 1 h, rastreada
     val DIGITS    = mapOf("p" to 2, "m" to 2)
@@ -74,6 +75,9 @@ object Model {
             Calibration(item.getDouble("lam"), item.getDouble("clip"), beta, offsets)
         }
 
+        val features = data.getJSONArray("features")
+        check(FEATURES == List(features.length()) { features.getString(it) }) { "model.json com outros atributos que os do app" }
+
         state     = fits
         version   = data.getInt("version")
         trainedAt = data.getJSONObject("metrics").getLong("trained_at")
@@ -83,18 +87,19 @@ object Model {
     fun ready() = boosters != null
 
     // SERIE PREVISTA PARA OS INSTANTES PEDIDOS: QUANTIS DO MULTIPLICADOR, DESLOCADOS PELA ANCORA DE HOJE E ABERTOS PELOS OFFSETS CONFORMAIS
-    fun get(route: Route, ts: LongArray, rain: DoubleArray, obs: Obs): Map<String, DoubleArray>? {
+    fun get(route: Route, ts: LongArray, rain: DoubleArray, obs: Obs, company: String): Map<String, DoubleArray>? {
         val trees = boosters ?: return null
         val both  = ts + obs.ts
         val clock = getClock(both, route.tz)
         val wet   = rain + obs.rain
-        val X     = Array(both.size) { doubleArrayOf(clock.hour[it], clock.weekday[it].toDouble(), route.distance, route.duration, route.corridor, wet[it]) }
+        val index = COMPANIES.keys.indexOf(company).toDouble()
+        val X     = Array(both.size) { doubleArrayOf(clock.hour[it], clock.weekday[it].toDouble(), route.distance, route.duration, route.corridor, wet[it], index) }
         val n     = ts.size
         val out   = LinkedHashMap<String, DoubleArray>()
 
         for ((column, prefix) in TARGETS) {
             val fit    = state.getValue(column)
-            val scale  = if (column == "price") Oracle.getTariff(route.distance, route.duration) else route.duration
+            val scale  = if (column == "price") Oracle.getTariff(route.distance, route.duration, 1.0, company) else route.duration
             val (lo, mid, hi) = getQuantiles(trees.getValue(column), X)
             val r      = DoubleArray(obs.ts.size) { ln(obs.values.getValue(column)[it] / scale / mid[n + it]) }
             val clip   = DoubleArray(r.size) { r[it].coerceIn(-fit.clip, fit.clip) }

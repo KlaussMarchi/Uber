@@ -11,7 +11,7 @@ sqlite3.register_adapter(np.int64, int)
 
 # SQLITE LOCAL (WAL) COM UMA CONEXAO POR OPERACAO; BANCO DE OUTRA VERSAO E RECRIADO PARA O WORKER REGERAR HISTORICO E MODELO
 class Database:
-    VERSION = 5   # sobe quando o esquema ou o oraculo mudam; o historico e sintetico, entao banco antigo e recriado
+    VERSION = 6   # sobe quando o esquema ou o oraculo mudam; o historico e sintetico, entao banco antigo e recriado
 
     SCHEMA = '''
         CREATE TABLE IF NOT EXISTS Routes (
@@ -34,13 +34,15 @@ class Database:
             route_id INTEGER NOT NULL REFERENCES Routes (id),
             ts       INTEGER NOT NULL,
             rain     REAL    NOT NULL,
-            price    REAL    NOT NULL,
+            excess   REAL    NOT NULL,
+            noise    REAL    NOT NULL,
             minutes  REAL    NOT NULL,
             PRIMARY KEY (route_id, ts)
         );
 
         CREATE TABLE IF NOT EXISTS Forecasts (
             route_id INTEGER NOT NULL REFERENCES Routes (id),
+            company  TEXT    NOT NULL,
             made_at  INTEGER NOT NULL,
             ts       INTEGER NOT NULL,
             p10      REAL    NOT NULL,
@@ -49,9 +51,17 @@ class Database:
             m10      REAL    NOT NULL,
             m50      REAL    NOT NULL,
             m90      REAL    NOT NULL,
-            price    REAL,
-            minutes  REAL,
-            PRIMARY KEY (route_id, made_at, ts)
+            PRIMARY KEY (route_id, company, made_at, ts)
+        );
+
+        CREATE TABLE IF NOT EXISTS Fares (
+            id       INTEGER PRIMARY KEY,
+            company  TEXT    NOT NULL,
+            ts       INTEGER NOT NULL,
+            distance REAL    NOT NULL,
+            minutes  REAL    NOT NULL,
+            surge    REAL    NOT NULL,
+            observed REAL    NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS Metrics (
@@ -80,7 +90,7 @@ class Database:
 
             if version != self.VERSION and tables:
                 logging.warning(f'banco na versao {version}, esperado {self.VERSION}: historico sintetico sera recriado')
-                conn.executescript('DROP TABLE IF EXISTS Routes; DROP TABLE IF EXISTS Prices; DROP TABLE IF EXISTS Forecasts; DROP TABLE IF EXISTS Metrics;')
+                conn.executescript('DROP TABLE IF EXISTS Routes; DROP TABLE IF EXISTS Prices; DROP TABLE IF EXISTS Forecasts; DROP TABLE IF EXISTS Metrics;')    # Fares fica: os precos reais informados pelo usuario nao sao sinteticos
 
             conn.execute('PRAGMA journal_mode = WAL')
             conn.executescript(self.SCHEMA)

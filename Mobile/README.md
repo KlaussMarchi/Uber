@@ -1,12 +1,14 @@
 # Tarifa Dinâmica — Android
 
-App Android que faz o mesmo que o app de desktop (`../Desktop`): preço e tempo de viagem agora e a previsão das
-próximas 12 h em passos de 10 min (p10, p50, p90), com chuva prevista e tempo de viagem previsto no mesmo eixo de tempo,
-acompanhamento em tempo real a cada 30 s e alerta sonoro a cada 10% de afastamento do preço da primeira consulta.
+App Android que faz o mesmo que o app de desktop (`../Desktop`): seletor **Uber | 99**, preço e tempo de viagem
+agora e a previsão das próximas 12 h em passos de 10 min (p10, p50, p90), com chuva prevista e tempo de viagem
+previsto no mesmo eixo de tempo, acompanhamento em tempo real a cada 30 s, alerta sonoro a cada 10% de afastamento
+do preço da primeira consulta e calibração da tarifa pelo preço real do aplicativo.
 
-> **Os preços são sintéticos**, como no desktop: não existe API pública gratuita de preços da Uber ou da 99, então o
-> "preço real" vem do oráculo que simula o mercado. Endereços (OpenStreetMap via Photon e Nominatim), rotas (OSRM),
-> clima (Open-Meteo) e localização (GPS do celular, ou BeaconDB) são dados reais.
+> **Os preços são simulados**, como no desktop: não existe API pública gratuita de preços da Uber ou da 99, então o
+> preço vem do oráculo que simula o mercado sobre a tabela de tarifas de cada aplicativo — e o campo *preço real no
+> app* ajusta essa tabela ao que o aplicativo cobra de verdade na sua cidade. Endereços (OpenStreetMap via Photon e
+> Nominatim), rotas (OSRM), clima (Open-Meteo) e localização (GPS do celular, ou Wi-Fi e IP) são dados reais.
 
 ## Instalar
 
@@ -16,7 +18,8 @@ acompanhamento em tempo real a cada 30 s e alerta sonoro a cada 10% de afastamen
 
 ## Como usar
 
-1. Digite origem e destino e escolha uma sugestão (a borda fica verde quando o endereço está validado).
+1. Escolha o aplicativo no seletor **Uber | 99** e digite origem e destino, escolhendo uma sugestão (a borda fica
+   verde quando o endereço está validado). Trocar de aplicativo recalcula na hora, sem consultar a rede de novo.
 2. O ◎ lê o GPS e abre o mapa "Onde você está?" na posição: toque no ponto exato ou escolha um lugar já usado.
    Sem permissão ou sem sinal de GPS, usa a estimativa por IP e, como ela erra quilômetros, abre no lugar já usado
    mais recente dentro do erro; sem nenhuma estimativa, no último lugar usado ou na região. Arraste para mover o
@@ -25,7 +28,10 @@ acompanhamento em tempo real a cada 30 s e alerta sonoro a cada 10% de afastamen
    resumo da rota e o gráfico: preço com a faixa p10–p90, chuva prevista e **tempo de viagem previsto** em minutos
    (ou horas), com as linhas sem trânsito, moderado e intenso. Arraste o dedo no gráfico para a cruzeta, que mostra
    também a hora de chegada; a barra escolhe a janela de 1 a 12 h.
-4. O **tempo real** continua com o app fechado: uma notificação fixa mostra o preço e a variação e tem o botão
+4. **Calibrar com o preço real.** Abra a Uber ou a 99 na mesma rota, veja quanto o app cobra agora, digite o valor
+   em *preço real no app* e toque em **Calibrar**: a tarifa daquele aplicativo passa a bater com ele, e a linha
+   abaixo do campo diz qual tarifa está em uso. **0** apaga a calibração. Os preços informados ficam no celular.
+5. O **tempo real** continua com o app fechado: uma notificação fixa mostra o preço e a variação e tem o botão
    **Parar**. A cada 10% de queda toca o arpejo ascendente e a cada 10% de alta o grave descendente (os mesmos sons do
    desktop), junto com uma notificação. O acompanhamento para sozinho 3 h depois da última consulta, para poupar
    bateria, e volta ao reabrir o app.
@@ -56,10 +62,12 @@ O app não tem "um modelo parecido": ele lê o **mesmo `model.json`** que o desk
 | `holidays` | feriados ANBIMA de 2020 a 2045 |
 | `clock` | dia da semana, hora e dia local em 4 fusos, inclusive o dia sem meia-noite de 2018 |
 | `random` | acidentes, ruído de preço e de tempo do oráculo |
-| `market` | preço e tempo do oráculo em ~7 mil instantes, 4 rotas e 4 fusos |
+| `tariff` | tarifa, dinâmica e preço dos dois aplicativos em 80 combinações de distância, tempo e demanda |
+| `fares` | tabela ajustada aos preços reais informados em 7 casos: nenhum, um, sob o piso, seis rotas, dois aplicativos, absurdo e mais de uma amostra |
+| `market` | estado do mercado, preço e tempo do oráculo em ~12 mil instantes, 4 rotas, 4 fusos e os dois aplicativos |
 | `quantiles` | soma das árvores e quantis rearranjados na chuva em 60 linhas aleatórias |
-| `model` | série p10–m90 em 96 casos (4 rotas × 6 horários × 4 regimes, inclusive acidente) |
-| `engine` | série completa com clima interpolado e observações do dia em 16 casos |
+| `model` | série p10–m90 em 192 casos (4 rotas × 2 aplicativos × 6 horários × 4 regimes, inclusive acidente) |
+| `engine` | série completa com clima interpolado e observações do dia em 32 casos |
 | `durations` e `spans` | tempo de viagem em minutos ou horas, com o mesmo arredondamento e o mesmo texto |
 | `starts` | ponto inicial do mapa do ◎ em 8 situações de estimativa e lugares já usados |
 | `alerts` | alertas a cada 10% de afastamento, sem repetir no mesmo patamar |
@@ -71,7 +79,8 @@ O app não tem "um modelo parecido": ele lê o **mesmo `model.json`** que o desk
   modelo tiveram o mesmo erro de calibração, 2,15% e 3,50%).
 - **Worker enquanto o app está aberto ou acompanhando uma rota**, como no desktop, que só observa com a janela
   aberta: a cada slot de 10 min observa as 5 rotas mais recentes, guarda as previsões e as consolida.
-- **Localização pelo GPS**, com a estimativa por IP como reserva.
+- **Localização pelo GPS**, que é o que o desktop não tem; sem permissão ou sem sinal ele cai para a mesma
+  reserva do desktop: BeaconDB e três provedores de IP, ficando com a fonte mais precisa.
 - **Tempo real em serviço de primeiro plano**, para funcionar com a tela desligada.
 
 ## Estrutura
@@ -82,11 +91,11 @@ golden.py                        gera o golden.json a partir do desktop e copia 
 app/src/main/assets/model.json   modelo treinado pelo desktop
 app/src/main/java/com/klauss/tarifa/
   Api/        Photon, Nominatim, OSRM (com espelho FOSSGIS), Open-Meteo e BeaconDB, com fila por servidor e retentativa
-  Database/   SQLite com o mesmo esquema do desktop
+  Database/   SQLite com o mesmo esquema do desktop (Prices guarda o estado do mercado; Fares, os preços reais informados)
   Engine/     rota, clima, preço e tempo observados agora e série ancorada
   Model/      árvores do LightGBM, rearranjo na chuva, âncora com corte de choque e faixa conformal
-  Oracle/     mercado simulado, idêntico ao do desktop
-  Worker/     observação a cada slot e consolidação das previsões
+  Oracle/     tarifa de cada aplicativo e mercado simulado, idênticos aos do desktop
+  Worker/     observação a cada slot e consolidação das previsões dos dois aplicativos
   Tracker/    tempo real em primeiro plano, notificação e alertas
   Interface/  tela (Interface.kt), gráfico (Chart/), campo com autocomplete (Search/) e mapa (Locator/)
   Utils/      relógio e feriados, gerador do numpy, tabelas do ziggurat e som dos alertas

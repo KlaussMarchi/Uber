@@ -14,9 +14,9 @@ data class Route(val id: Long, val origin: String, val destination: String, val 
 
 // SQLITE LOCAL (WAL) COM O MESMO ESQUEMA DO DESKTOP; BANCO DE OUTRA VERSAO E RECRIADO E O WORKER VOLTA A OBSERVAR
 object Database {
-    const val VERSION = 1
+    const val VERSION = 2
 
-    val TABLES = listOf("Routes", "Prices", "Forecasts", "Metrics")
+    val TABLES = listOf("Routes", "Prices", "Forecasts", "Metrics")    // Fares fica: os precos reais informados pelo usuario nao sao sinteticos
 
     val SCHEMA = listOf(
         """CREATE TABLE IF NOT EXISTS Routes (
@@ -38,12 +38,14 @@ object Database {
             route_id INTEGER NOT NULL REFERENCES Routes (id),
             ts       INTEGER NOT NULL,
             rain     REAL    NOT NULL,
-            price    REAL    NOT NULL,
+            excess   REAL    NOT NULL,
+            noise    REAL    NOT NULL,
             minutes  REAL    NOT NULL,
             PRIMARY KEY (route_id, ts)
         )""",
         """CREATE TABLE IF NOT EXISTS Forecasts (
             route_id INTEGER NOT NULL REFERENCES Routes (id),
+            company  TEXT    NOT NULL,
             made_at  INTEGER NOT NULL,
             ts       INTEGER NOT NULL,
             p10      REAL    NOT NULL,
@@ -52,9 +54,16 @@ object Database {
             m10      REAL    NOT NULL,
             m50      REAL    NOT NULL,
             m90      REAL    NOT NULL,
-            price    REAL,
-            minutes  REAL,
-            PRIMARY KEY (route_id, made_at, ts)
+            PRIMARY KEY (route_id, company, made_at, ts)
+        )""",
+        """CREATE TABLE IF NOT EXISTS Fares (
+            id       INTEGER PRIMARY KEY,
+            company  TEXT    NOT NULL,
+            ts       INTEGER NOT NULL,
+            distance REAL    NOT NULL,
+            minutes  REAL    NOT NULL,
+            surge    REAL    NOT NULL,
+            observed REAL    NOT NULL
         )""",
         """CREATE TABLE IF NOT EXISTS Metrics (
             ts             INTEGER PRIMARY KEY,

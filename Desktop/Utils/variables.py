@@ -11,6 +11,9 @@ TZ      = 'America/Sao_Paulo'    # fuso da regiao de referencia; cada rota guard
 STEP    = 600          # resolucao da serie e do oraculo (10 min)
 HORIZON = 12 * 3600    # a serie e sempre calculada inteira; a janela da tela so recorta o que aparece
 
+# aplicativo -> nome na tela; a ordem e o indice que o modelo usa como categoria e nao pode mudar sem retreinar
+COMPANIES = {'uber': 'Uber', '99': '99'}
+
 # rua grafada "Avarez Parada" no OSM; o teatro fica na Av. Amazonas, junto ao terminal rodoviario
 ORIGIN      = {'label': 'Rua Professor Antônio Álvares 92, Parque Aeroporto, Macaé - RJ', 'lat': -22.3413711, 'lon': -41.7556714}
 DESTINATION = {'label': 'Teatro Popular de Rio das Ostras - RJ', 'lat': -22.527063, 'lon': -41.9458}

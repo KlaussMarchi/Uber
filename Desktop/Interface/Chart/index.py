@@ -87,7 +87,7 @@ class Chart(ctk.CTkFrame):
         self.label.configure(text=f'janela {hours} h')
         self.cb()
 
-    def plot(self, df, route):
+    def plot(self, df, route, company):
         view    = df[df['ts'] <= df['ts'].iloc[0] + self.hours * 3600].reset_index(drop=True)
         local   = getLocal(view['ts'], route['tz'])
         free    = route['duration']
@@ -102,7 +102,7 @@ class Chart(ctk.CTkFrame):
             ax.tick_params(length=0, labelbottom=ax is traffic)
 
         # sem legenda: o titulo de cada linha diz o que ela mostra e os rotulos ficam direto nas marcas
-        for ax, title, note in ((price, 'Preço da corrida', 'previsto (p50) e faixa p10–p90'), (chance, 'Chuva prevista', 'chance por hora e intensidade'), (traffic, 'Tempo de viagem previsto', 'previsto (m50) e faixa m10–m90')):
+        for ax, title, note in ((price, f'Preço da corrida · {company}', 'previsto (p50) e faixa p10–p90'), (chance, 'Chuva prevista', 'chance por hora e intensidade'), (traffic, 'Tempo de viagem previsto', 'previsto (m50) e faixa m10–m90')):
             ax.set_title(title, loc='left', fontsize=11, color=COLORS['text'], pad=6)
             ax.set_title(note, loc='right', fontsize=9, color=COLORS['muted'], pad=6)
 

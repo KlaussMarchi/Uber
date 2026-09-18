@@ -6,8 +6,9 @@ from bootstrap import bootstrap
 from Database.index import database
 from Engine.index import engine
 from Model.index import model
+from Oracle.index import getPrice
 from Utils.functions import getMoney
-from Utils.variables import STEP
+from Utils.variables import COMPANIES, STEP
 
 
 # SERVICO EM SEGUNDO PLANO: PRIMEIRO BOOT, ORACULO A CADA 10 MIN, CONSOLIDACAO DAS PREVISOES E RETREINO
@@ -30,6 +31,7 @@ class Worker:
             return True
 
         database.setup()
+        engine.setup()
 
         if database.get('SELECT COUNT(*) AS n FROM Prices')['n'][0] == 0:
             self.status = 'Primeiro boot: gerando um ano de histórico sintético sobre a chuva real da região…'
@@ -51,14 +53,17 @@ class Worker:
         routes = database.get('SELECT * FROM Routes WHERE used_at > 0 ORDER BY used_at DESC LIMIT ?', (self.TRACKED,)).to_dict('records')
 
         for route in routes:
-            df = engine.get(route, now=slot)
+            frames = {company: engine.get(route, company, now=slot) for company in COMPANIES}
 
-            if df is None:
+            if any(df is None for df in frames.values()):
                 continue
 
-            future = df.iloc[1:]
-            database.set('INSERT OR IGNORE INTO Prices (route_id, ts, rain, price, minutes) VALUES (?, ?, ?, ?, ?)', [(route['id'], slot, float(df['rain'][0]), float(df['price'][0]), float(df['minutes'][0]))])
-            database.set('INSERT OR IGNORE INTO Forecasts (route_id, made_at, ts, p10, p50, p90, m10, m50, m90) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', zip(repeat(route['id']), repeat(slot), future['ts'].tolist(), future['p10'].tolist(), future['p50'].tolist(), future['p90'].tolist(), future['m10'].tolist(), future['m50'].tolist(), future['m90'].tolist()))
+            state = next(iter(frames.values())).iloc[0]
+            database.set('INSERT OR IGNORE INTO Prices (route_id, ts, rain, excess, noise, minutes) VALUES (?, ?, ?, ?, ?, ?)', [(route['id'], slot, float(state['rain']), float(state['excess']), float(state['noise']), float(state['minutes']))])
+
+            for company, df in frames.items():
+                future = df.iloc[1:]
+                database.set('INSERT OR IGNORE INTO Forecasts (route_id, company, made_at, ts, p10, p50, p90, m10, m50, m90) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', zip(repeat(route['id']), repeat(company), repeat(slot), future['ts'].tolist(), future['p10'].tolist(), future['p50'].tolist(), future['p90'].tolist(), future['m10'].tolist(), future['m50'].tolist(), future['m90'].tolist()))
 
         self.check(slot)
 
@@ -70,13 +75,16 @@ class Worker:
         self.status = f"Modelo v{model.version} · {len(routes)} {'rota monitorada' if len(routes) == 1 else 'rotas monitoradas'}{online}"
         logging.info(self.status)
 
+    # PREVISOES CUJO HORARIO JA PASSOU CONTRA O ESTADO OBSERVADO NAQUELE SLOT; O PRECO DE CADA UMA SAI DA TARIFA DO SEU APLICATIVO
     def check(self, now):
-        database.set('UPDATE Forecasts SET price = (SELECT p.price FROM Prices p WHERE p.route_id = Forecasts.route_id AND p.ts = Forecasts.ts), minutes = (SELECT p.minutes FROM Prices p WHERE p.route_id = Forecasts.route_id AND p.ts = Forecasts.ts) WHERE price IS NULL AND ts <= ?', [(now,)])
         database.set('DELETE FROM Forecasts WHERE ts < ?', [(now - self.KEEP,)])
-        df = database.get('SELECT p10, p50, p90, price, m10, m50, m90, minutes FROM Forecasts WHERE price IS NOT NULL AND ts > ?', (now - 86400,))
+        df = database.get('SELECT f.company, f.p10, f.p50, f.p90, f.m10, f.m50, f.m90, p.excess, p.noise, p.minutes, r.distance FROM Forecasts f JOIN Prices p ON p.route_id = f.route_id AND p.ts = f.ts JOIN Routes r ON r.id = f.route_id WHERE f.ts > ?', (now - 86400,))
 
         if df.empty:
             return
+
+        for company, part in df.groupby('company'):
+            df.loc[part.index, 'price'] = getPrice(part['distance'], part['minutes'], part['excess'], part['noise'], company)
 
         alpha = np.array(list(model.QUANTILES.values()))
         self.metrics = {'n': len(df)}
@@ -92,7 +100,7 @@ class Worker:
         database.set('INSERT OR REPLACE INTO Metrics (ts, version, n, price_mae, price_coverage, time_mae, time_coverage) VALUES (?, ?, ?, ?, ?, ?, ?)', [(now, model.version, len(df), self.metrics['p']['mae'], self.metrics['p']['coverage'], self.metrics['m']['mae'], self.metrics['m']['coverage'])])
 
     def update(self):
-        df = database.get('SELECT p.route_id, p.ts, p.rain, p.price, p.minutes, r.distance, r.duration, r.corridor, r.tz FROM Prices p JOIN Routes r ON r.id = p.route_id')
+        df = database.get('SELECT p.route_id, p.ts, p.rain, p.excess, p.noise, p.minutes, r.distance, r.duration, r.corridor, r.tz FROM Prices p JOIN Routes r ON r.id = p.route_id')
 
         if model.update(df):
             model.export()

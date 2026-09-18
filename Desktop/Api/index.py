@@ -1,8 +1,11 @@
 import logging, subprocess, threading, requests
+import numpy as np
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
 from time import time, sleep
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from Utils.functions import getDistance
 
 
 # CLIENTE DOS SERVICOS ABERTOS (PHOTON, NOMINATIM, OSRM, OPEN-METEO, BEACONDB) COM FILA POR SERVIDOR E RETENTATIVA EM FALHA 5XX
@@ -14,6 +17,13 @@ class Api:
     FORECAST  = 'https://api.open-meteo.com/v1/forecast'
     ARCHIVE   = 'https://archive-api.open-meteo.com/v1/archive'
     BEACONDB  = 'https://api.beacondb.net/v1/geolocate'
+
+    # provedores gratuitos de posicao por IP, sem cadastro, e onde cada um guarda a coordenada; a mediana protege contra um deles errar centenas de km
+    ADDRESSES = {
+        'https://get.geojs.io/v1/ip/geo.json': lambda res: (res.get('latitude'), res.get('longitude')),
+        'https://ipwho.is/':                   lambda res: (res.get('latitude'), res.get('longitude')),
+        'https://ipinfo.io/json':              lambda res: (res.get('loc') or ',').split(',')[:2],
+    }
     AGENT     = 'TarifaDinamica/1.0 (desktop app em Python)'
     TIMEOUT   = 12
     CORRIDOR  = ('Rodovia Amaral Peixoto', 'RJ-106')
@@ -21,6 +31,7 @@ class Api:
     BRAZIL    = '-74.0,-33.8,-34.7,5.3'
     MAX_SNAP  = 2000     # m do ponto pedido ate a via mais proxima; acima disso nao ha acesso de carro (ilha, mar)
     STREET    = 1000     # m de precisao abaixo da qual a localizacao atual vira endereco de rua, e nao so cidade
+    IP_ERROR  = 5000     # m de erro que a posicao por IP tem no melhor caso: ela aponta o bairro do provedor, nunca a rua
 
     # segundos entre requisicoes por servidor, conforme as politicas de uso publicas
     INTERVALS = {'nominatim.openstreetmap.org': 1.1, 'router.project-osrm.org': 1.1, 'routing.openstreetmap.de': 1.1, 'photon.komoot.io': 0.3}
@@ -75,8 +86,21 @@ class Api:
 
         return {'label': ', '.join(res[0]['display_name'].split(', ')[:3]), 'lat': float(res[0]['lat']), 'lon': float(res[0]['lon'])}
 
-    # POSICAO ATUAL SEM GPS: REDES WI-FI VISIVEIS (NMCLI) E, SEM COBERTURA, O IP; O BEACONDB E ABERTO E DEVOLVE A PRECISAO EM METROS
+    # POSICAO ATUAL SEM GPS: AS REDES WI-FI VISIVEIS E OS PROVEDORES DE IP AO MESMO TEMPO; VALE A FONTE MAIS PRECISA, QUE E O WI-FI ONDE O BEACONDB TEM COBERTURA
     def locate(self):
+        with ThreadPoolExecutor(2) as pool:
+            found = [place.result() for place in (pool.submit(self.getBeacon), pool.submit(self.getAddress))]
+
+        found = [place for place in found if place is not None]
+
+        if not found:
+            return None
+
+        place = min(found, key=lambda item: item['accuracy'])
+        return {**self.reverse(place['lat'], place['lon'], place['accuracy'] <= self.STREET), 'accuracy': place['accuracy']}
+
+    # POSICAO PELAS REDES WI-FI VISIVEIS (NMCLI) NO BEACONDB, QUE E ABERTO E DEVOLVE A PRECISAO EM METROS; SEM VARREDURA NA BASE ELE CAI PARA O IP E DECLARA DEZENAS DE KM
+    def getBeacon(self):
         try:
             scan = subprocess.run(['nmcli', '-t', '-f', 'BSSID,SIGNAL', 'device', 'wifi', 'list'], capture_output=True, text=True, timeout=10).stdout
         except (OSError, subprocess.TimeoutExpired):
@@ -90,8 +114,28 @@ class Api:
         if res is None or 'location' not in res:
             return None
 
-        accuracy = res.get('accuracy', 0)
-        return {**self.reverse(res['location']['lat'], res['location']['lng'], accuracy <= self.STREET), 'accuracy': accuracy}
+        return {'lat': res['location']['lat'], 'lon': res['location']['lng'], 'accuracy': res.get('accuracy', 0) or self.IP_ERROR}
+
+    # POSICAO PELO IP: A MEDIANA DOS PROVEDORES QUE RESPONDEREM, COM A DISPERSAO ENTRE ELES COMO ERRO DECLARADO
+    def getAddress(self):
+        with ThreadPoolExecutor(len(self.ADDRESSES)) as pool:
+            found = [point for point in pool.map(self.getCoords, self.ADDRESSES) if point is not None]
+
+        if not found:
+            return None
+
+        place  = {'lat': float(np.median([point[0] for point in found])), 'lon': float(np.median([point[1] for point in found]))}
+        spread = max(getDistance(place, {'lat': lat, 'lon': lon}) for lat, lon in found) * 1000
+        return {**place, 'accuracy': float(max(spread, self.IP_ERROR))}
+
+    # COORDENADA DE UM PROVEDOR DE IP; RESPOSTA AUSENTE, FORA DO GLOBO OU NO PONTO NULO NAO CONTA
+    def getCoords(self, url):
+        try:
+            lat, lon = (float(value) for value in self.ADDRESSES[url](self.get(url, {}) or {}))
+        except (AttributeError, TypeError, ValueError):    # provedor que muda o formato da resposta nao derruba a localizacao
+            return None
+
+        return (lat, lon) if -90 <= lat <= 90 and -180 <= lon <= 180 and (lat or lon) else None
 
     # ENDERECO DE UMA COORDENADA (PHOTON REVERSO); COM ESTIMATIVA GROSSEIRA MOSTRA SO A CIDADE, PARA NAO SUGERIR UMA RUA ERRADA
     def reverse(self, lat, lon, street=True):

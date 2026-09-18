@@ -31,6 +31,10 @@ object Api {
     const val BRAZIL    = "-74.0,-33.8,-34.7,5.3"
     const val MAX_SNAP  = 2000.0    // m do ponto pedido ate a via mais proxima; acima disso nao ha acesso de carro (ilha, mar)
     const val STREET    = 1000.0    // m de precisao abaixo da qual a localizacao vira endereco de rua, e nao so cidade
+    const val IP_ERROR  = 5000.0    // m de erro que a posicao por IP tem no melhor caso: ela aponta o bairro do provedor, nunca a rua
+
+    // provedores gratuitos de posicao por IP, sem cadastro; a mediana protege contra um deles errar centenas de km
+    val ADDRESSES = listOf("https://get.geojs.io/v1/ip/geo.json", "https://ipwho.is/", "https://ipinfo.io/json")
 
     val OSRM     = listOf("https://router.project-osrm.org/route/v1/driving/", "https://routing.openstreetmap.de/routed-car/route/v1/driving/")    // demonstracao do projeto e espelho da FOSSGIS com o mesmo mapa; o segundo so entra quando o primeiro falha
     val CORRIDOR = listOf("Rodovia Amaral Peixoto", "RJ-106")
@@ -114,12 +118,39 @@ object Api {
         return Place(res.getString("display_name").split(", ").take(3).joinToString(", "), res.getString("lat").toDouble(), res.getString("lon").toDouble())
     }
 
-    // POSICAO APROXIMADA PELO IP NO BEACONDB, USADA SO QUANDO O GPS DO CELULAR NAO ESTA DISPONIVEL OU PERMITIDO
+    // POSICAO APROXIMADA SEM GPS: O BEACONDB E OS PROVEDORES DE IP; VALE A FONTE MAIS PRECISA, COMO NO DESKTOP
     fun locate(): Place? {
+        val found = listOfNotNull(getBeacon(), getAddress()).minByOrNull { it.accuracy ?: IP_ERROR } ?: return null
+        val error = found.accuracy ?: IP_ERROR
+        return reverse(found.lat!!, found.lon!!, error <= STREET).copy(accuracy = error)
+    }
+
+    // POSICAO NO BEACONDB, QUE E ABERTO E DEVOLVE A PRECISAO EM METROS; SEM AS REDES DO CELULAR ELE RESPONDE PELO IP E DECLARA DEZENAS DE KM
+    fun getBeacon(): Place? {
         val res      = get(BEACONDB, "{}") as? JSONObject ?: return null
         val location = res.optJSONObject("location") ?: return null
-        val accuracy = res.optDouble("accuracy", 0.0)
-        return reverse(location.getDouble("lat"), location.getDouble("lng"), accuracy <= STREET).copy(accuracy = accuracy)
+        return Place("", location.getDouble("lat"), location.getDouble("lng"), res.optDouble("accuracy", 0.0).takeIf { it > 0 } ?: IP_ERROR)
+    }
+
+    // POSICAO PELO IP: A MEDIANA DOS PROVEDORES QUE RESPONDEREM, COM A DISPERSAO ENTRE ELES COMO ERRO DECLARADO
+    fun getAddress(): Place? {
+        val found = ADDRESSES.parallelStream().map(::getCoords).toList().filterNotNull()
+
+        if (found.isEmpty()) return null
+
+        val lat    = Oracle.getMedian(found.map { it.first })
+        val lon    = Oracle.getMedian(found.map { it.second })
+        val spread = found.maxOf { getDistance(lat, lon, it.first, it.second) } * 1000
+        return Place("", lat, lon, max(spread, IP_ERROR))
+    }
+
+    // COORDENADA DE UM PROVEDOR DE IP; RESPOSTA AUSENTE, FORA DO GLOBO OU NO PONTO NULO NAO CONTA
+    fun getCoords(url: String): Pair<Double, Double>? {
+        val res   = get(url) as? JSONObject ?: return null
+        val point = getText(res, "loc").split(",")
+        val lat   = (res.opt("latitude")?.toString() ?: point.getOrNull(0))?.toDoubleOrNull() ?: return null
+        val lon   = (res.opt("longitude")?.toString() ?: point.getOrNull(1))?.toDoubleOrNull() ?: return null
+        return if (lat in -90.0..90.0 && lon in -180.0..180.0 && (lat != 0.0 || lon != 0.0)) lat to lon else null
     }
 
     // ENDERECO DE UMA COORDENADA (PHOTON REVERSO); COM ESTIMATIVA GROSSEIRA MOSTRA SO A CIDADE, PARA NAO SUGERIR UMA RUA ERRADA

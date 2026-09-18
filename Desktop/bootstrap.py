@@ -7,7 +7,7 @@ from time import time
 from Api.index import api
 from Database.index import database
 from Engine.index import engine
-from Oracle.index import getMarket
+from Oracle.index import getState
 from Utils.variables import ORIGIN, DESTINATION, STEP
 
 
@@ -37,7 +37,7 @@ ROUTES = [
 ]
 
 
-# PRIMEIRO BOOT: UM ANO DE CHUVA REAL DA REGIAO COM TEMPESTADES INJETADAS E, SOBRE ELA, O PRECO DO ORACULO A CADA 10 MIN EM CADA ROTA
+# PRIMEIRO BOOT: UM ANO DE CHUVA REAL DA REGIAO COM TEMPESTADES INJETADAS E, SOBRE ELA, O ESTADO DO MERCADO A CADA 10 MIN EM CADA ROTA; O PRECO DE CADA APLICATIVO SAI DELE
 def bootstrap():
     routes = [engine.getRoute(src, dst) for src, dst in ROUTES]
     today  = date.today()
@@ -64,10 +64,10 @@ def bootstrap():
     rain = np.round(np.interp(ts, weather['ts'], weather['rain']) + storm, 3)
 
     for route in routes:
-        price, minutes = getMarket(route, ts, rain)
-        database.set('INSERT OR IGNORE INTO Prices (route_id, ts, rain, price, minutes) VALUES (?, ?, ?, ?, ?)', zip(repeat(route['id']), ts.tolist(), rain.tolist(), price.tolist(), minutes.tolist()))
+        excess, noise, minutes = getState(route, ts, rain)
+        database.set('INSERT OR IGNORE INTO Prices (route_id, ts, rain, excess, noise, minutes) VALUES (?, ?, ?, ?, ?, ?)', zip(repeat(route['id']), ts.tolist(), rain.tolist(), excess.tolist(), noise.tolist(), minutes.tolist()))
 
-    logging.info(f'bootstrap: {len(ts) * len(routes)} precos sinteticos de {len(routes)} rotas em {DAYS} dias, {n} tempestades injetadas')
+    logging.info(f'bootstrap: {len(ts) * len(routes)} estados de mercado de {len(routes)} rotas em {DAYS} dias, {n} tempestades injetadas')
     return True
 
 
@@ -75,4 +75,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     database.setup()
     print('bootstrap concluido:', bootstrap())
-    print(database.get('SELECT r.origin, ROUND(r.distance, 1) AS km, ROUND(r.duration, 1) AS livre, COUNT(*) AS n, ROUND(AVG(p.price), 2) AS preco, ROUND(AVG(p.minutes), 1) AS tempo, ROUND(MAX(p.minutes), 1) AS pior FROM Prices p JOIN Routes r ON r.id = p.route_id GROUP BY r.id').to_string())
+    print(database.get('SELECT r.origin, ROUND(r.distance, 1) AS km, ROUND(r.duration, 1) AS livre, COUNT(*) AS n, ROUND(AVG(p.excess), 3) AS excesso, ROUND(AVG(p.minutes), 1) AS tempo, ROUND(MAX(p.minutes), 1) AS pior FROM Prices p JOIN Routes r ON r.id = p.route_id GROUP BY r.id').to_string())

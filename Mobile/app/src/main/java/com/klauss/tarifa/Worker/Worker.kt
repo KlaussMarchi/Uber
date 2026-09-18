@@ -6,7 +6,7 @@ import kotlin.math.abs
 // ERRO MEDIO E COBERTURA DA FAIXA DAS PREVISOES CONSOLIDADAS DE UM ALVO
 class Accuracy(val mae: Double, val coverage: Double)
 
-// OBSERVACAO EM SEGUNDO PLANO, COMO O WORKER DO DESKTOP: ORACULO A CADA SLOT NAS ROTAS RECENTES, PREVISOES GUARDADAS E CONSOLIDADAS; O MODELO VEM TREINADO DO DESKTOP
+// OBSERVACAO EM SEGUNDO PLANO, COMO O WORKER DO DESKTOP: ESTADO DO MERCADO A CADA SLOT NAS ROTAS RECENTES, PREVISOES DOS DOIS APLICATIVOS GUARDADAS E CONSOLIDADAS
 object Worker {
     const val KEEP    = 7 * 86400L    // s de previsoes guardadas para consolidacao
     const val TRACKED = 5             // rotas recentes observadas pelo oraculo
@@ -29,9 +29,16 @@ object Worker {
         val routes = Database.get("SELECT id, origin, destination, o_lat, o_lon, d_lat, d_lon, distance, duration, corridor, tz FROM Routes WHERE used_at > 0 ORDER BY used_at DESC LIMIT ?", TRACKED, fn = Database::getRoute)
 
         for (route in routes) {
-            val series = Engine.get(route, slot) ?: continue
-            Database.set("INSERT OR IGNORE INTO Prices (route_id, ts, rain, price, minutes) VALUES (?, ?, ?, ?, ?)", listOf(arrayOf(route.id, slot, series.rain[0], series.price, series.minutes)))
-            Database.set("INSERT OR IGNORE INTO Forecasts (route_id, made_at, ts, p10, p50, p90, m10, m50, m90) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (1 until series.ts.size).map { i -> arrayOf<Any?>(route.id, slot, series.ts[i], *COLUMNS.map { series.bands.getValue(it)[i] }.toTypedArray()) })
+            val series = COMPANIES.keys.mapNotNull { company -> Engine.get(route, company, slot)?.let { company to it } }
+
+            if (series.size < COMPANIES.size) continue
+
+            val state = series.first().second
+            Database.set("INSERT OR IGNORE INTO Prices (route_id, ts, rain, excess, noise, minutes) VALUES (?, ?, ?, ?, ?, ?)", listOf(arrayOf<Any?>(route.id, slot, state.rain[0], state.excess, state.noise, state.minutes)))
+
+            for ((company, found) in series) {
+                Database.set("INSERT OR IGNORE INTO Forecasts (route_id, company, made_at, ts, p10, p50, p90, m10, m50, m90) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (1 until found.ts.size).map { i -> arrayOf<Any?>(route.id, company, slot, found.ts[i], *COLUMNS.map { found.bands.getValue(it)[i] }.toTypedArray()) })
+            }
         }
 
         check(slot)
@@ -43,16 +50,18 @@ object Worker {
         status = "Modelo v${Model.version} · ${routes.size} ${if (routes.size == 1) "rota monitorada" else "rotas monitoradas"}$online"
     }
 
-    // CONSOLIDA AS PREVISOES CUJO HORARIO JA PASSOU CONTRA O PRECO E O TEMPO OBSERVADOS E MEDE AS ULTIMAS 24 H
+    // PREVISOES CUJO HORARIO JA PASSOU CONTRA O ESTADO OBSERVADO NAQUELE SLOT; O PRECO DE CADA UMA SAI DA TARIFA DO SEU APLICATIVO
     fun check(now: Long) {
-        Database.set("UPDATE Forecasts SET price = (SELECT p.price FROM Prices p WHERE p.route_id = Forecasts.route_id AND p.ts = Forecasts.ts), minutes = (SELECT p.minutes FROM Prices p WHERE p.route_id = Forecasts.route_id AND p.ts = Forecasts.ts) WHERE price IS NULL AND ts <= ?", listOf(arrayOf(now)))
         Database.set("DELETE FROM Forecasts WHERE ts < ?", listOf(arrayOf(now - KEEP)))
-        val rows = Database.get("SELECT p10, p50, p90, price, m10, m50, m90, minutes FROM Forecasts WHERE price IS NOT NULL AND ts > ?", now - 86400) { cursor -> DoubleArray(8) { cursor.getDouble(it) } }
+        val rows = Database.get("SELECT f.company, f.p10, f.p50, f.p90, f.m10, f.m50, f.m90, p.excess, p.noise, p.minutes, r.distance FROM Forecasts f JOIN Prices p ON p.route_id = f.route_id AND p.ts = f.ts JOIN Routes r ON r.id = f.route_id WHERE f.ts > ?", now - 86400) { cursor ->
+            val price = Oracle.getPrice(cursor.getDouble(10), cursor.getDouble(9), cursor.getDouble(7), cursor.getDouble(8), cursor.getString(0))
+            doubleArrayOf(cursor.getDouble(1), cursor.getDouble(2), cursor.getDouble(3), price, cursor.getDouble(4), cursor.getDouble(5), cursor.getDouble(6), cursor.getDouble(9))
+        }
 
         if (rows.isEmpty()) return
 
         samples = rows.size
         metrics = mapOf("p" to 0, "m" to 4).mapValues { (_, k) -> Accuracy(rows.map { abs(it[k + 3] - it[k + 1]) }.average(), rows.map { if (it[k + 3] >= it[k] && it[k + 3] <= it[k + 2]) 1.0 else 0.0 }.average()) }
-        Database.set("INSERT OR REPLACE INTO Metrics (ts, version, n, price_mae, price_coverage, time_mae, time_coverage) VALUES (?, ?, ?, ?, ?, ?, ?)", listOf(arrayOf(now, Model.version, rows.size, metrics.getValue("p").mae, metrics.getValue("p").coverage, metrics.getValue("m").mae, metrics.getValue("m").coverage)))
+        Database.set("INSERT OR REPLACE INTO Metrics (ts, version, n, price_mae, price_coverage, time_mae, time_coverage) VALUES (?, ?, ?, ?, ?, ?, ?)", listOf(arrayOf<Any?>(now, Model.version, rows.size, metrics.getValue("p").mae, metrics.getValue("p").coverage, metrics.getValue("m").mae, metrics.getValue("m").coverage)))
     }
 }
