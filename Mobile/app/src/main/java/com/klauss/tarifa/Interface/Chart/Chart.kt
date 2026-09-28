@@ -71,6 +71,7 @@ class Chart {
         const val TITLE  = 20       // dp da linha de titulo de cada painel
         const val GAP    = 10
         const val AXIS   = 20       // dp dos rotulos de hora sob o transito
+        const val LABEL  = 14       // dp de altura de um rotulo de 10 sp
     }
 
     var hours by mutableIntStateOf(5)
@@ -140,7 +141,7 @@ class Chart {
         val p50     = series.bands.getValue("p50")
         val p90     = series.bands.getValue("p90")
         val m50     = series.bands.getValue("m50")
-        val free    = route.duration
+        val free    = Oracle.getFree(route)
         val xAt     = { t: Long -> left + (t - ts[0]).toFloat() / (ts[n - 1] - ts[0]) * (right - left) }
         val clock   = { t: Long -> getLocal(t, route.tz).format(HHMM) }
 
@@ -223,11 +224,18 @@ class Chart {
         drawPath(Path().apply { moveTo(xAt(ts[0]), yt(m90[0])); for (i in 1 until n) lineTo(xAt(ts[i]), yt(m90[i])); for (i in n - 1 downTo 0) lineTo(xAt(ts[i]), yt(m10[i])); close() }, COLORS.traffic.copy(alpha = 0.18f))
         drawPath(Path().apply { moveTo(xAt(ts[0]), yt(m50[0])); for (i in 1 until n) lineTo(xAt(ts[i]), yt(m50[i])) }, COLORS.traffic, style = Stroke(2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 
+        var used = Float.POSITIVE_INFINITY    // topo do ultimo rotulo desenhado; rotulo que encostaria nele nao e desenhado
+
         for ((level, name) in LEVELS) {
             val minutes = free * (1 + level / 100)
             if (minutes > top) continue
+            val above  = yt(minutes) - tops[3] > 16.dp.toPx()    // rente ao topo do painel o rotulo vai para baixo da linha, para nao invadir o titulo
+            val height = LABEL.dp.toPx()
+            val bottom = if (above) yt(minutes) - 3.dp.toPx() else yt(minutes) + 3.dp.toPx() + height
             drawLine(COLORS.border, Offset(left, yt(minutes)), Offset(right, yt(minutes)), 1.dp.toPx())
-            showText(measurer, "$name · ${getDuration(minutes)}", right - 4.dp.toPx(), yt(minutes) - 3.dp.toPx(), COLORS.muted, 10.sp, align = 1f, valign = 1f, halo = COLORS.card)
+            if (bottom > used - 2.dp.toPx()) continue
+            showText(measurer, "$name · ${getDuration(minutes)}", right - 4.dp.toPx(), yt(minutes) + (if (above) -3 else 3).dp.toPx(), COLORS.muted, 10.sp, align = 1f, valign = if (above) 1f else 0f, halo = COLORS.card)
+            used = bottom - height
         }
 
         // o eixo mostra a hora do lugar da rota, em passos redondos do relogio local
@@ -245,9 +253,9 @@ class Chart {
 
         for (k in 0 until 4) drawLine(COLORS.muted, Offset(xAt(ts[i]), tops[k]), Offset(xAt(ts[i]), tops[k] + heights[k]), 1.dp.toPx())
 
-        val seen    = if (i == 0) "\n${getMoney(series.price)} e ${getDuration(series.minutes)}   observados" else ""
+        val seen    = if (i == 0) "\ndinâmica estimada de ${getFixed(series.surge, 2)}×   agora" else ""
         val arrival = getLocal((ts[i] + m50[i] * 60).toLong(), route.tz).format(HHMM)
-        val text    = "${clock(ts[i])}$seen\n${getMoney(p50[i])}   previsto (${getMoney(p10[i])} a ${getMoney(p90[i])})\n${getDuration(m50[i])}   viagem (${getSpan(m10[i], m90[i])})\nchegada às $arrival   ${getDelay(m50[i] - free)} de trânsito\n${getFixed(series.rain[i], 1)} mm/h · ${getFixed(series.probability[i], 0)}% de chance   chuva"
+        val text    = "${clock(ts[i])}$seen\n${getMoney(p50[i])}   previsto (${getMoney(p10[i])} a ${getMoney(p90[i])})\n${getDuration(m50[i])}   viagem (${getSpan(m10[i], m90[i])})\nchegada às $arrival   ${getDelay(m50[i] - free)} de trânsito\n${getFixed(series.rain[i], 1)} mm/h · ${getChance(series.probability[i])} de chance   chuva"
         val layout = measurer.measure(text, TextStyle(color = COLORS.text, fontSize = 11.sp, lineHeight = 16.sp))
         val inset  = 8.dp.toPx()
         val box    = Size(layout.size.width + 2 * inset, layout.size.height + 2 * inset)

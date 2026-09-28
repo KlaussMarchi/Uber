@@ -114,7 +114,7 @@ class Tracker : Service() {
     override fun onCreate() {
         super.onCreate()
         Database.setup(this)
-        Engine.setup()    // a notificacao mostra preco: a tarifa calibrada tem de estar carregada mesmo se o servico subir antes da tela
+        Engine.setup(this)    // a notificacao mostra preco: a tabela e os precos informados tem de estar carregados mesmo se o servico subir antes da tela
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(LIVE, "Preço em tempo real", NotificationManager.IMPORTANCE_LOW))
         manager.createNotificationChannel(NotificationChannel(ALERTS, "Alertas de preço", NotificationManager.IMPORTANCE_HIGH).apply { setSound(null, null) })

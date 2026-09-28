@@ -1,0 +1,700 @@
+slug,fetched,km,min,uberx,trips,src,uf,lat,lon,o_km,o_min
+almirante-tamandare-pr-br-to-colombo-pr-br,2026-09-26,11.0,20.0,25.0,3263,Almirante Tamandaré,PR,-25.3188,-49.3037,10.14,11.715
+almirante-tamandare-pr-br-to-itaperucu-pr-br,2026-09-26,14.0,25.0,32.0,149,Almirante Tamandaré,PR,-25.3188,-49.3037,17.295,17.075
+alvorada-rs-br-to-balneario-pinhal-rs-br,2026-09-26,99.0,105.0,150.0,1,Alvorada,RS,-29.9914,-51.0809,98.977,110.392
+alvorada-rs-br-to-montenegro-rs-br,2026-09-26,68.0,73.0,129.0,4,Alvorada,RS,-29.9914,-51.0809,67.686,65.317
+americana-sp-br-to-nova-odessa-sp-br,2026-09-26,9.0,17.0,22.0,9666,Americana,SP,-22.7374,-47.3331,8.556,9.013
+americana-sp-br-to-paulinia-sp-br,2026-09-26,22.0,28.0,58.0,275,Americana,SP,-22.7374,-47.3331,31.433,31.467
+angra-dos-reis-rj-br-to-itaguai-rj-br,2026-09-26,72.0,76.0,149.0,12,Angra dos Reis,RJ,-23.0011,-44.3196,85.249,99.465
+angra-dos-reis-rj-br-to-nova-iguacu-rj-br,2026-09-26,121.0,122.0,266.0,7,Angra dos Reis,RJ,-23.0011,-44.3196,130.089,132.887
+aparecida-de-goiania-go-br-to-senador-canedo-go-br,2026-09-26,25.0,35.0,42.0,2792,Aparecida de Goiânia,GO,-16.8198,-49.2469,34.488,33.643
+aracaju-se-br-to-areia-branca-se-br,2026-09-26,40.0,49.0,76.0,8,Aracaju,SE,-10.9091,-37.0677,36.549,37.748
+aracariguama-sp-br-to-pirapora-do-bom-jesus-sp-br,2026-09-26,12.0,22.0,33.0,63,Araçariguama,SP,-23.4366,-47.0608,12.524,18.007
+aracariguama-sp-br-to-sorocaba-sp-br,2026-09-26,56.0,49.0,157.0,189,Araçariguama,SP,-23.4366,-47.0608,47.249,36.147
+araruama-rj-br-to-arraial-do-cabo-rj-br,2026-09-26,33.0,49.0,63.0,87,Araruama,RJ,-22.8697,-42.3326,54.12,65.098
+araruama-rj-br-to-niteroi-rj-br,2026-09-26,96.0,102.0,193.0,3,Araruama,RJ,-22.8697,-42.3326,104.063,96.393
+araruama-rj-br-to-sao-pedro-da-aldeia-rj-br,2026-09-26,27.0,39.0,57.0,501,Araruama,RJ,-22.8697,-42.3326,31.159,34.737
+araucaria-pr-br-to-mandirituba-pr-br,2026-09-26,33.0,44.0,58.0,7,Araucária,PR,-25.5859,-49.4047,31.887,33.697
+araucaria-pr-br-to-quatro-barras-pr-br,2026-09-26,52.0,58.0,85.0,26,Araucária,PR,-25.5859,-49.4047,60.039,49.088
+armacao-dos-buzios-rj-br-to-sao-pedro-da-aldeia-rj-br,2026-09-26,24.0,43.0,54.0,382,Armação dos Búzios,RJ,-22.7528,-41.8846,31.042,48.545
+arraial-do-cabo-rj-br-to-rio-das-ostras-rj-br,2026-09-26,65.0,101.0,137.0,12,Arraial do Cabo,RJ,-22.9774,-42.0267,66.715,90.582
+aruja-sp-br-to-carapicuiba-sp-br,2026-09-26,68.0,79.0,173.0,3,Arujá,SP,-23.3965,-46.32,62.193,51.888
+aruja-sp-br-to-ribeirao-pires-sp-br,2026-09-26,57.0,66.0,124.0,2,Arujá,SP,-23.3965,-46.32,58.673,50.622
+atibaia-sp-br-to-campinas-sp-br,2026-09-26,73.0,66.0,167.0,137,Atibaia,SP,-23.1171,-46.5563,65.807,51.758
+atibaia-sp-br-to-guarulhos-sp-br,2026-09-26,62.0,66.0,139.0,408,Atibaia,SP,-23.1171,-46.5563,52.502,49.582
+balneario-camboriu-sc-br-to-balneario-picarras-sc-br,2026-09-26,36.0,46.0,66.0,174,Balneário Camboriú,SC,-26.9926,-48.6352,35.355,31.253
+balneario-camboriu-sc-br-to-biguacu-sc-br,2026-09-26,60.0,59.0,104.0,11,Balneário Camboriú,SC,-26.9926,-48.6352,62.235,53.105
+balneario-picarras-sc-br-to-balneario-camboriu-sc-br,2026-09-26,38.0,54.0,67.0,245,Balneário Piçarras,SC,-26.7639,-48.6717,35.683,31.017
+balneario-picarras-sc-br-to-itajai-sc-br,2026-09-26,25.0,42.0,49.0,984,Balneário Piçarras,SC,-26.7639,-48.6717,25.399,24.71
+barra-do-pirai-rj-br-to-barra-mansa-rj-br,2026-09-26,19.0,34.0,44.0,173,Barra do Piraí,RJ,-22.4715,-43.8269,45.356,52.242
+barra-do-pirai-rj-br-to-pinheiral-rj-br,2026-09-26,14.0,26.0,32.0,109,Barra do Piraí,RJ,-22.4715,-43.8269,26.518,37.445
+barra-do-pirai-rj-br-to-pirai-rj-br,2026-09-26,14.0,24.0,36.0,35,Barra do Piraí,RJ,-22.4715,-43.8269,27.211,31.852
+barra-do-pirai-rj-br-to-valenca-rj-br,2026-09-26,32.0,46.0,56.0,5,Barra do Piraí,RJ,-22.4715,-43.8269,34.926,33.725
+barra-do-pirai-rj-br-to-vassouras-rj-br,2026-09-26,17.0,26.0,38.0,17,Barra do Piraí,RJ,-22.4715,-43.8269,20.896,23.245
+barra-do-pirai-rj-br-to-volta-redonda-rj-br,2026-09-26,8.0,18.0,23.0,5472,Barra do Piraí,RJ,-22.4715,-43.8269,37.112,41.218
+barra-mansa-rj-br-to-barra-do-pirai-rj-br,2026-09-26,20.0,36.0,44.0,172,Barra Mansa,RJ,-22.5481,-44.1752,45.553,51.685
+barra-mansa-rj-br-to-itatiaia-rj-br,2026-09-26,46.0,44.0,84.0,28,Barra Mansa,RJ,-22.5481,-44.1752,48.1,37.862
+barra-mansa-rj-br-to-pirai-rj-br,2026-09-26,28.0,33.0,54.0,25,Barra Mansa,RJ,-22.5481,-44.1752,39.022,34.815
+barra-mansa-rj-br-to-quatis-rj-br,2026-09-26,17.0,24.0,41.0,76,Barra Mansa,RJ,-22.5481,-44.1752,27.871,28.95
+barra-mansa-rj-br-to-rio-claro-rj-br,2026-09-26,33.0,48.0,68.0,7,Barra Mansa,RJ,-22.5481,-44.1752,37.154,40.773
+barra-mansa-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,123.0,133.0,236.0,11,Barra Mansa,RJ,-22.5481,-44.1752,132.278,115.213
+barra-velha-sc-br-to-camboriu-sc-br,2026-09-26,48.0,58.0,87.0,29,Barra Velha,SC,-26.637,-48.6933,52.05,42.305
+barueri-sp-br-to-embu-guacu-sp-br,2026-09-26,52.0,79.0,134.0,17,Barueri,SP,-23.5057,-46.879,50.212,53.505
+barueri-sp-br-to-guaruja-sp-br,2026-09-26,128.0,137.0,284.0,12,Barueri,SP,-23.5057,-46.879,117.074,107.85
+barueri-sp-br-to-guarulhos-sp-br,2026-09-26,49.0,69.0,155.0,1954,Barueri,SP,-23.5057,-46.879,44.151,40.87
+barueri-sp-br-to-maua-sp-br,2026-09-26,76.0,92.0,211.0,55,Barueri,SP,-23.5057,-46.879,58.428,63.075
+barueri-sp-br-to-salto-sp-br,2026-09-26,83.0,70.0,215.0,11,Barueri,SP,-23.5057,-46.879,77.94,57.828
+barueri-sp-br-to-sao-jose-dos-campos-sp-br,2026-09-26,123.0,131.0,327.0,8,Barueri,SP,-23.5057,-46.879,116.658,94.297
+belem-pa-br-to-barcarena-pa-br,2026-09-26,75.0,105.0,142.0,7,Belém,PA,-1.4554,-48.4898,107.965,99.598
+belem-pa-br-to-marituba-pa-br,2026-09-26,20.0,40.0,38.0,9198,Belém,PA,-1.4554,-48.4898,23.992,27.273
+belford-roxo-rj-br-to-duque-de-caxias-rj-br,2026-09-26,9.0,23.0,25.0,25716,Belford Roxo,RJ,-22.764,-43.3992,15.41,16.473
+belford-roxo-rj-br-to-itaguai-rj-br,2026-09-26,65.0,74.0,114.0,54,Belford Roxo,RJ,-22.764,-43.3992,59.42,51.28
+belford-roxo-rj-br-to-japeri-rj-br,2026-09-26,33.0,49.0,58.0,195,Belford Roxo,RJ,-22.764,-43.3992,44.363,37.99
+belford-roxo-rj-br-to-mangaratiba-rj-br,2026-09-26,81.0,89.0,149.0,25,Belford Roxo,RJ,-22.764,-43.3992,86.832,69.715
+belford-roxo-rj-br-to-marica-rj-br,2026-09-26,81.0,118.0,150.0,61,Belford Roxo,RJ,-22.764,-43.3992,82.163,93.163
+belford-roxo-rj-br-to-mesquita-rj-br,2026-09-26,6.0,19.0,18.0,7054,Belford Roxo,RJ,-22.764,-43.3992,10.552,17.228
+belford-roxo-rj-br-to-nilopolis-rj-br,2026-09-26,11.0,30.0,27.0,2434,Belford Roxo,RJ,-22.764,-43.3992,8.184,10.168
+belford-roxo-rj-br-to-niteroi-rj-br,2026-09-26,49.0,78.0,96.0,255,Belford Roxo,RJ,-22.764,-43.3992,41.324,39.628
+belford-roxo-rj-br-to-queimados-rj-br,2026-09-26,22.0,38.0,43.0,770,Belford Roxo,RJ,-22.764,-43.3992,21.006,21.218
+belford-roxo-rj-br-to-sao-joao-de-meriti-rj-br,2026-09-26,8.0,21.0,21.0,16159,Belford Roxo,RJ,-22.764,-43.3992,6.515,7.365
+belford-roxo-rj-br-to-seropedica-rj-br,2026-09-26,48.0,64.0,83.0,66,Belford Roxo,RJ,-22.764,-43.3992,44.312,36.917
+belo-horizonte-mg-br-to-contagem-mg-br,2026-09-26,11.0,22.0,28.0,284208,Belo Horizonte,MG,-19.9102,-43.9266,17.487,21.777
+belo-horizonte-mg-br-to-itabira-mg-br,2026-09-26,108.0,138.0,234.0,4,Belo Horizonte,MG,-19.9102,-43.9266,103.182,107.552
+belo-horizonte-mg-br-to-matozinhos-mg-br,2026-09-26,44.0,53.0,93.0,754,Belo Horizonte,MG,-19.9102,-43.9266,47.786,40.76
+belo-horizonte-mg-br-to-para-de-minas-mg-br,2026-09-26,86.0,92.0,172.0,22,Belo Horizonte,MG,-19.9102,-43.9266,88.517,84.252
+bertioga-sp-br-to-guarulhos-sp-br,2026-09-26,97.0,121.0,252.0,24,Bertioga,SP,-23.8486,-46.1396,107.928,101.205
+bertioga-sp-br-to-sao-vicente-sp-br,2026-09-26,67.0,76.0,146.0,13,Bertioga,SP,-23.8486,-46.1396,64.944,65.203
+betim-mg-br-to-caete-mg-br,2026-09-26,76.0,110.0,137.0,6,Betim,MG,-19.9668,-44.2008,86.183,91.21
+blumenau-sc-br-to-itapema-sc-br,2026-09-26,86.0,88.0,136.0,28,Blumenau,SC,-26.9155,-49.0709,85.068,70.875
+blumenau-sc-br-to-navegantes-sc-br,2026-09-26,57.0,58.0,105.0,957,Blumenau,SC,-26.9155,-49.0709,59.14,50.517
+braganca-paulista-sp-br-to-bom-jesus-dos-perdoes-sp-br,2026-09-26,33.0,34.0,66.0,34,Bragança Paulista,SP,-22.9527,-46.5419,34.429,31.298
+braganca-paulista-sp-br-to-socorro-sp-br,2026-09-26,46.0,56.0,94.0,5,Bragança Paulista,SP,-22.9527,-46.5419,46.561,46.545
+brasilia-df-br-to-anapolis-go-br,2026-09-26,144.0,125.0,260.0,13,Brasília,DF,-15.7795,-47.9297,150.449,129.585
+brasilia-df-br-to-planaltina-go-br,2026-09-26,33.0,41.0,51.0,5276,Brasília,DF,-15.7795,-47.9297,57.558,55.53
+brusque-sc-br-to-guabiruba-sc-br,2026-09-26,11.0,19.0,24.0,3661,Brusque,SC,-27.0977,-48.9107,10.486,14.148
+brusque-sc-br-to-porto-belo-sc-br,2026-09-26,64.0,74.0,100.0,10,Brusque,SC,-27.0977,-48.9107,65.662,65.445
+cabo-de-santo-agostinho-pe-br-to-barreiros-pe-br,2026-09-26,76.0,92.0,135.0,1,Cabo de Santo Agostinho,PE,-8.28218,-35.0253,74.066,77.762
+cabo-de-santo-agostinho-pe-br-to-rio-formoso-pe-br,2026-09-26,56.0,66.0,100.0,6,Cabo de Santo Agostinho,PE,-8.28218,-35.0253,52.957,55.752
+cabo-frio-rj-br-to-armacao-dos-buzios-rj-br,2026-09-26,19.0,38.0,45.0,4268,Cabo Frio,RJ,-22.8894,-42.0286,24.533,38.4
+cabo-frio-rj-br-to-arraial-do-cabo-rj-br,2026-09-26,14.0,26.0,35.0,5662,Cabo Frio,RJ,-22.8894,-42.0286,13.714,17.81
+cabo-frio-rj-br-to-casimiro-de-abreu-rj-br,2026-09-26,6.0,16.0,20.0,1483,Cabo Frio,RJ,-22.8894,-42.0286,76.137,100.922
+cabo-frio-rj-br-to-macae-rj-br,2026-09-26,48.0,83.0,108.0,219,Cabo Frio,RJ,-22.8894,-42.0286,73.708,104.143
+cabo-frio-rj-br-to-sao-goncalo-rj-br,2026-09-26,134.0,131.0,284.0,3,Cabo Frio,RJ,-22.8894,-42.0286,129.912,122.097
+cabo-frio-rj-br-to-saquarema-rj-br,2026-09-26,62.0,82.0,132.0,65,Cabo Frio,RJ,-22.8894,-42.0286,74.306,86.207
+cachoeirinha-rs-br-to-glorinha-rs-br,2026-09-26,38.0,40.0,64.0,15,Cachoeirinha,RS,-29.9472,-51.1016,39.196,34.85
+cachoeirinha-rs-br-to-ivoti-rs-br,2026-09-26,44.0,48.0,69.0,7,Cachoeirinha,RS,-29.9472,-51.1016,47.145,53.06
+caieiras-sp-br-to-guarulhos-sp-br,2026-09-26,52.0,70.0,137.0,100,Caieiras,SP,-23.3607,-46.7397,47.649,46.652
+caieiras-sp-br-to-itaquaquecetuba-sp-br,2026-09-26,70.0,87.0,157.0,2,Caieiras,SP,-23.3607,-46.7397,69.475,63.368
+cajamar-sp-br-to-campinas-sp-br,2026-09-26,67.0,58.0,136.0,184,Cajamar,SP,-23.355,-46.8781,63.278,53.29
+cajamar-sp-br-to-ferraz-de-vasconcelos-sp-br,2026-09-26,80.0,111.0,200.0,3,Cajamar,SP,-23.355,-46.8781,75.381,66.453
+cajamar-sp-br-to-jundiai-sp-br,2026-09-26,25.0,27.0,58.0,2297,Cajamar,SP,-23.355,-46.8781,26.993,24.78
+cajamar-sp-br-to-osasco-sp-br,2026-09-26,28.0,38.0,93.0,1865,Cajamar,SP,-23.355,-46.8781,31.031,29.343
+cajamar-sp-br-to-sao-bernardo-do-campo-sp-br,2026-09-26,73.0,86.0,192.0,84,Cajamar,SP,-23.355,-46.8781,60.576,58.757
+cajamar-sp-br-to-sumare-sp-br,2026-09-26,81.0,69.0,157.0,13,Cajamar,SP,-23.355,-46.8781,88.641,64.542
+camacari-ba-br-to-alagoinhas-ba-br,2026-09-26,86.0,105.0,166.0,7,Camaçari,BA,-12.6996,-38.3263,79.237,76.597
+camacari-ba-br-to-santo-amaro-ba-br,2026-09-26,68.0,77.0,138.0,10,Camaçari,BA,-12.6996,-38.3263,62.866,58.342
+camaragibe-pe-br-to-carpina-pe-br,2026-09-26,41.0,53.0,81.0,15,Camaragibe,PE,-8.02351,-34.9782,40.261,35.935
+camaragibe-pe-br-to-jaboatao-dos-guararapes-pe-br,2026-09-26,20.0,39.0,41.0,2881,Camaragibe,PE,-8.02351,-34.9782,19.617,21.795
+camboriu-sc-br-to-florianopolis-sc-br,2026-09-26,96.0,95.0,152.0,21,Camboriú,SC,-27.0241,-48.6503,82.602,69.882
+camboriu-sc-br-to-penha-sc-br,2026-09-26,38.0,47.0,64.0,93,Camboriú,SC,-27.0241,-48.6503,37.234,31.302
+campina-grande-do-sul-pr-br-to-araucaria-pr-br,2026-09-26,49.0,60.0,84.0,59,Campina Grande do Sul,PR,-25.3044,-49.0551,65.952,52.827
+campina-grande-do-sul-pr-br-to-sao-jose-dos-pinhais-pr-br,2026-09-26,36.0,35.0,61.0,602,Campina Grande do Sul,PR,-25.3044,-49.0551,41.697,37.118
+campina-grande-pb-br-to-esperanca-pb-br,2026-09-26,28.0,44.0,55.0,19,Campina Grande,PB,-7.22196,-35.8731,24.959,26.375
+campina-grande-pb-br-to-lagoa-seca-pb-br,2026-09-26,9.0,20.0,20.0,3058,Campina Grande,PB,-7.22196,-35.8731,9.246,11.757
+campinas-sp-br-to-araras-sp-br,2026-09-26,83.0,68.0,162.0,13,Campinas,SP,-22.9053,-47.0659,77.963,62.848
+campinas-sp-br-to-indaiatuba-sp-br,2026-09-26,25.0,31.0,72.0,2074,Campinas,SP,-22.9053,-47.0659,28.745,27.062
+campinas-sp-br-to-porto-feliz-sp-br,2026-09-26,72.0,61.0,169.0,20,Campinas,SP,-22.9053,-47.0659,74.439,59.937
+campinas-sp-br-to-santo-andre-sp-br,2026-09-26,129.0,133.0,221.0,34,Campinas,SP,-22.9053,-47.0659,117.788,100.298
+campinas-sp-br-to-valinhos-sp-br,2026-09-26,14.0,21.0,33.0,20350,Campinas,SP,-22.9053,-47.0659,10.95,12.41
+campinas-sp-br-to-votorantim-sp-br,2026-09-26,86.0,73.0,208.0,44,Campinas,SP,-22.9053,-47.0659,92.532,73.978
+campo-bom-rs-br-to-capela-de-santana-rs-br,2026-09-26,36.0,47.0,63.0,5,Campo Bom,RS,-29.6747,-51.0606,35.916,44.02
+campo-bom-rs-br-to-esteio-rs-br,2026-09-26,28.0,36.0,48.0,194,Campo Bom,RS,-29.6747,-51.0606,28.893,35.128
+campo-grande-ms-br-to-terenos-ms-br,2026-09-26,20.0,28.0,40.0,159,Campo Grande,MS,-20.4486,-54.6295,31.878,27.83
+campo-largo-pr-br-to-piraquara-pr-br,2026-09-26,56.0,68.0,84.0,81,Campo Largo,PR,-25.4525,-49.529,65.198,56.26
+campo-largo-pr-br-to-quatro-barras-pr-br,2026-09-26,59.0,74.0,105.0,10,Campo Largo,PR,-25.4525,-49.529,51.286,55.887
+campo-limpo-paulista-sp-br-to-cajamar-sp-br,2026-09-26,27.0,39.0,61.0,275,Campo Limpo Paulista,SP,-23.2078,-46.7889,24.207,26.852
+campo-limpo-paulista-sp-br-to-jarinu-sp-br,2026-09-26,14.0,21.0,29.0,850,Campo Limpo Paulista,SP,-23.2078,-46.7889,14.741,14.282
+campos-dos-goytacazes-rj-br-to-italva-rj-br,2026-09-26,70.0,75.0,120.0,3,Campos dos Goytacazes,RJ,-21.7622,-41.3181,67.041,73.378
+campos-dos-goytacazes-rj-br-to-macae-rj-br,2026-09-26,102.0,99.0,217.0,7,Campos dos Goytacazes,RJ,-21.7622,-41.3181,104.469,101.13
+campos-dos-goytacazes-rj-br-to-sao-fidelis-rj-br,2026-09-26,56.0,60.0,103.0,6,Campos dos Goytacazes,RJ,-21.7622,-41.3181,55.431,58.69
+campos-dos-goytacazes-rj-br-to-sao-francisco-de-itabapoana-rj-br,2026-09-26,51.0,65.0,88.0,12,Campos dos Goytacazes,RJ,-21.7622,-41.3181,49.996,49.117
+campos-dos-goytacazes-rj-br-to-sao-joao-da-barra-rj-br,2026-09-26,33.0,45.0,58.0,99,Campos dos Goytacazes,RJ,-21.7622,-41.3181,36.073,39.495
+canoas-rs-br-to-esteio-rs-br,2026-09-26,9.0,15.0,20.0,21016,Canoas,RS,-29.9128,-51.1857,8.716,12.982
+canoas-rs-br-to-lindolfo-collor-rs-br,2026-09-26,44.0,51.0,84.0,2,Canoas,RS,-29.9128,-51.1857,47.072,52.645
+carapicuiba-sp-br-to-campo-limpo-paulista-sp-br,2026-09-26,54.0,66.0,128.0,2,Carapicuíba,SP,-23.5235,-46.8407,48.348,47.437
+carapicuiba-sp-br-to-diadema-sp-br,2026-09-26,48.0,68.0,121.0,59,Carapicuíba,SP,-23.5235,-46.8407,38.12,43.115
+carapicuiba-sp-br-to-franco-da-rocha-sp-br,2026-09-26,41.0,55.0,127.0,97,Carapicuíba,SP,-23.5235,-46.8407,36.012,41.215
+carapicuiba-sp-br-to-guarulhos-sp-br,2026-09-26,51.0,70.0,141.0,469,Carapicuíba,SP,-23.5235,-46.8407,41.155,39.305
+carapicuiba-sp-br-to-praia-grande-sp-br,2026-09-26,107.0,108.0,248.0,13,Carapicuíba,SP,-23.5235,-46.8407,93.877,87.55
+carapicuiba-sp-br-to-sorocaba-sp-br,2026-09-26,80.0,77.0,184.0,17,Carapicuíba,SP,-23.5235,-46.8407,75.518,58.3
+casimiro-de-abreu-rj-br-to-cabo-frio-rj-br,2026-09-26,6.0,16.0,18.0,1550,Casimiro de Abreu,RJ,-22.4812,-42.2066,75.509,100.093
+casimiro-de-abreu-rj-br-to-macae-rj-br,2026-09-26,35.0,59.0,60.0,347,Casimiro de Abreu,RJ,-22.4812,-42.2066,55.027,53.523
+casimiro-de-abreu-rj-br-to-sao-pedro-da-aldeia-rj-br,2026-09-26,40.0,56.0,67.0,21,Casimiro de Abreu,RJ,-22.4812,-42.2066,87.423,88.017
+caucaia-ce-br-to-horizonte-ce-br,2026-09-26,57.0,65.0,113.0,43,Caucaia,CE,-3.72797,-38.6619,62.053,73.35
+caucaia-ce-br-to-pindoretama-ce-br,2026-09-26,65.0,80.0,131.0,6,Caucaia,CE,-3.72797,-38.6619,62.919,67.09
+caxias-do-sul-rs-br-to-nova-petropolis-rs-br,2026-09-26,36.0,59.0,73.0,20,Caxias do Sul,RS,-29.1629,-51.1792,35.312,36.278
+caxias-do-sul-rs-br-to-novo-hamburgo-rs-br,2026-09-26,89.0,106.0,155.0,6,Caxias do Sul,RS,-29.1629,-51.1792,78.038,89.705
+colombo-pr-br-to-campo-largo-pr-br,2026-09-26,46.0,56.0,74.0,212,Colombo,PR,-25.2925,-49.2262,47.571,44.348
+colombo-pr-br-to-sao-jose-dos-pinhais-pr-br,2026-09-26,28.0,39.0,51.0,1875,Colombo,PR,-25.2925,-49.2262,32.789,39.203
+confins-mg-br-to-capim-branco-mg-br,2026-09-26,27.0,38.0,74.0,15,Confins,MG,-19.6282,-43.9931,21.53,20.778
+confins-mg-br-to-mario-campos-mg-br,2026-09-26,78.0,95.0,192.0,22,Confins,MG,-19.6282,-43.9931,74.246,72.08
+contagem-mg-br-to-itabirito-mg-br,2026-09-26,62.0,70.0,100.0,24,Contagem,MG,-19.9321,-44.0539,61.391,60.87
+cotia-sp-br-to-embu-das-artes-sp-br,2026-09-26,11.0,24.0,33.0,5947,Cotia,SP,-23.6022,-46.919,12.355,16.728
+cotia-sp-br-to-mairinque-sp-br,2026-09-26,41.0,51.0,118.0,37,Cotia,SP,-23.6022,-46.919,34.402,36.313
+cotia-sp-br-to-santana-de-parnaiba-sp-br,2026-09-26,28.0,49.0,76.0,372,Cotia,SP,-23.6022,-46.919,29.723,31.003
+cotia-sp-br-to-santo-andre-sp-br,2026-09-26,64.0,86.0,161.0,67,Cotia,SP,-23.6022,-46.919,51.058,57.663
+cotia-sp-br-to-suzano-sp-br,2026-09-26,97.0,117.0,229.0,1,Cotia,SP,-23.6022,-46.919,92.114,82.48
+cotia-sp-br-to-vargem-grande-paulista-sp-br,2026-09-26,11.0,18.0,31.0,11534,Cotia,SP,-23.6022,-46.919,12.592,14.747
+criciuma-sc-br-to-sideropolis-sc-br,2026-09-26,12.0,20.0,28.0,1654,Criciúma,SC,-28.6723,-49.3729,13.402,13.708
+criciuma-sc-br-to-tubarao-sc-br,2026-09-26,64.0,57.0,122.0,84,Criciúma,SC,-28.6723,-49.3729,62.247,50.903
+cuiaba-mt-br-to-varzea-grande-mt-br,2026-09-26,11.0,22.0,26.0,82112,Cuiabá,MT,-15.601,-56.0974,7.006,8.387
+curitiba-pr-br-to-balsa-nova-pr-br,2026-09-26,43.0,52.0,73.0,102,Curitiba,PR,-25.4195,-49.2646,52.904,56.208
+diadema-sp-br-to-itapecerica-da-serra-sp-br,2026-09-26,36.0,76.0,103.0,40,Diadema,SP,-23.6813,-46.6205,31.436,45.385
+diadema-sp-br-to-mogi-das-cruzes-sp-br,2026-09-26,83.0,86.0,231.0,11,Diadema,SP,-23.6813,-46.6205,88.775,76.59
+diadema-sp-br-to-poa-sp-br,2026-09-26,59.0,81.0,158.0,4,Diadema,SP,-23.6813,-46.6205,39.883,58.737
+diadema-sp-br-to-sao-paulo-sp-br,2026-09-26,9.0,22.0,28.0,102655,Diadema,SP,-23.6813,-46.6205,21.483,29.865
+diadema-sp-br-to-sao-vicente-sp-br,2026-09-26,57.0,73.0,140.0,17,Diadema,SP,-23.6813,-46.6205,54.837,49.107
+diadema-sp-br-to-vargem-grande-paulista-sp-br,2026-09-26,68.0,85.0,155.0,3,Diadema,SP,-23.6813,-46.6205,56.53,60.882
+dois-irmaos-rs-br-to-montenegro-rs-br,2026-09-26,59.0,62.0,107.0,2,Dois Irmãos,RS,-29.5836,-51.0898,51.32,57.22
+dois-irmaos-rs-br-to-taquara-rs-br,2026-09-26,38.0,43.0,68.0,24,Dois Irmãos,RS,-29.5836,-51.0898,38.212,46.5
+duque-de-caxias-rj-br-to-belford-roxo-rj-br,2026-09-26,9.0,22.0,23.0,23490,Duque de Caxias,RJ,-22.7858,-43.3049,14.339,14.16
+duque-de-caxias-rj-br-to-guapimirim-rj-br,2026-09-26,44.0,51.0,91.0,151,Duque de Caxias,RJ,-22.7858,-43.3049,57.203,46.978
+duque-de-caxias-rj-br-to-itaguai-rj-br,2026-09-26,68.0,70.0,116.0,121,Duque de Caxias,RJ,-22.7858,-43.3049,58.555,51.193
+duque-de-caxias-rj-br-to-mage-rj-br,2026-09-26,12.0,24.0,26.0,21221,Duque de Caxias,RJ,-22.7858,-43.3049,44.268,38.88
+duque-de-caxias-rj-br-to-marica-rj-br,2026-09-26,75.0,103.0,135.0,199,Duque de Caxias,RJ,-22.7858,-43.3049,71.743,84.137
+duque-de-caxias-rj-br-to-mesquita-rj-br,2026-09-26,24.0,37.0,42.0,1872,Duque de Caxias,RJ,-22.7858,-43.3049,22.425,27.848
+duque-de-caxias-rj-br-to-nova-iguacu-rj-br,2026-09-26,27.0,42.0,48.0,9393,Duque de Caxias,RJ,-22.7858,-43.3049,19.968,19.785
+duque-de-caxias-rj-br-to-paracambi-rj-br,2026-09-26,64.0,71.0,104.0,12,Duque de Caxias,RJ,-22.7858,-43.3049,63.718,52.27
+eldorado-do-sul-rs-br-to-barra-do-ribeiro-rs-br,2026-09-26,43.0,38.0,73.0,21,Eldorado do Sul,RS,-30.0847,-51.6187,68.858,63.78
+eldorado-do-sul-rs-br-to-porto-alegre-rs-br,2026-09-26,19.0,27.0,33.0,11050,Eldorado do Sul,RS,-30.0847,-51.6187,48.894,47.527
+embu-das-artes-sp-br-to-campinas-sp-br,2026-09-26,107.0,91.0,229.0,40,Embu das Artes,SP,-23.6437,-46.8579,103.902,85.563
+embu-das-artes-sp-br-to-itupeva-sp-br,2026-09-26,84.0,81.0,172.0,81,Embu das Artes,SP,-23.6437,-46.8579,83.602,71.018
+embu-das-artes-sp-br-to-maua-sp-br,2026-09-26,72.0,74.0,165.0,15,Embu das Artes,SP,-23.6437,-46.8579,72.511,63.608
+embu-das-artes-sp-br-to-santana-de-parnaiba-sp-br,2026-09-26,36.0,52.0,93.0,88,Embu das Artes,SP,-23.6437,-46.8579,39.708,42.188
+embu-das-artes-sp-br-to-sao-caetano-do-sul-sp-br,2026-09-26,51.0,80.0,146.0,19,Embu das Artes,SP,-23.6437,-46.8579,43.989,58.658
+embu-guacu-sp-br-to-barueri-sp-br,2026-09-26,52.0,80.0,137.0,22,Embu-Guaçu,SP,-23.8297,-46.8136,51.968,52.323
+embu-guacu-sp-br-to-cotia-sp-br,2026-09-26,40.0,71.0,96.0,48,Embu-Guaçu,SP,-23.8297,-46.8136,36.801,45.002
+esmeraldas-mg-br-to-belo-horizonte-mg-br,2026-09-26,38.0,59.0,74.0,3283,Esmeraldas,MG,-19.764,-44.3065,59.289,60.695
+esmeraldas-mg-br-to-juatuba-mg-br,2026-09-26,41.0,51.0,78.0,23,Esmeraldas,MG,-19.764,-44.3065,32.351,40.032
+estancia-velha-rs-br-to-sao-leopoldo-rs-br,2026-09-26,14.0,19.0,26.0,3226,Estância Velha,RS,-29.6535,-51.1843,15.558,18.647
+estancia-velha-rs-br-to-sao-sebastiao-do-cai-rs-br,2026-09-26,25.0,30.0,55.0,12,Estância Velha,RS,-29.6535,-51.1843,25.213,26.603
+esteio-rs-br-to-estancia-velha-rs-br,2026-09-26,27.0,31.0,46.0,113,Esteio,RS,-29.852,-51.1841,29.05,34.842
+esteio-rs-br-to-ivoti-rs-br,2026-09-26,33.0,38.0,61.0,64,Esteio,RS,-29.852,-51.1841,34.199,41.965
+eusebio-ce-br-to-aquiraz-ce-br,2026-09-26,11.0,17.0,26.0,7434,Eusébio,CE,-3.8925,-38.4559,8.71,12.372
+eusebio-ce-br-to-caucaia-ce-br,2026-09-26,36.0,52.0,75.0,515,Eusébio,CE,-3.8925,-38.4559,39.443,42.44
+fazenda-rio-grande-pr-br-to-curitiba-pr-br,2026-09-26,22.0,34.0,39.0,25201,Fazenda Rio Grande,PR,-25.6624,-49.3073,30.347,36.922
+feira-de-santana-ba-br-to-anguera-ba-br,2026-09-26,38.0,45.0,57.0,9,Feira de Santana,BA,-12.2664,-38.9663,39.653,40.738
+feira-de-santana-ba-br-to-sao-goncalo-dos-campos-ba-br,2026-09-26,8.0,19.0,19.0,6081,Feira de Santana,BA,-12.2664,-38.9663,19.918,22.22
+ferraz-de-vasconcelos-sp-br-to-cajamar-sp-br,2026-09-26,72.0,96.0,151.0,4,Ferraz de Vasconcelos,SP,-23.5411,-46.371,78.628,70.43
+ferraz-de-vasconcelos-sp-br-to-sao-paulo-sp-br,2026-09-26,6.0,19.0,21.0,51351,Ferraz de Vasconcelos,SP,-23.5411,-46.371,40.424,42.168
+florianopolis-sc-br-to-porto-belo-sc-br,2026-09-26,73.0,74.0,141.0,90,Florianópolis,SC,-27.5945,-48.5477,66.486,59.857
+florianopolis-sc-br-to-sao-joao-batista-sc-br,2026-09-26,84.0,91.0,154.0,11,Florianópolis,SC,-27.5945,-48.5477,77.599,71.678
+fortaleza-ce-br-to-aquiraz-ce-br,2026-09-26,25.0,37.0,52.0,11731,Fortaleza,CE,-3.71664,-38.5423,31.311,43.93
+fortaleza-ce-br-to-palmacia-ce-br,2026-09-26,67.0,99.0,121.0,6,Fortaleza,CE,-3.71664,-38.5423,78.464,85.817
+fortaleza-ce-br-to-redencao-ce-br,2026-09-26,64.0,77.0,135.0,21,Fortaleza,CE,-3.71664,-38.5423,67.924,67.348
+francisco-morato-sp-br-to-osasco-sp-br,2026-09-26,43.0,66.0,98.0,154,Francisco Morato,SP,-23.2792,-46.7448,41.514,43.645
+francisco-morato-sp-br-to-varzea-paulista-sp-br,2026-09-26,20.0,36.0,36.0,152,Francisco Morato,SP,-23.2792,-46.7448,21.985,22.957
+franco-da-rocha-sp-br-to-itapecerica-da-serra-sp-br,2026-09-26,60.0,77.0,164.0,4,Franco da Rocha,SP,-23.3229,-46.729,56.403,55.417
+franco-da-rocha-sp-br-to-itupeva-sp-br,2026-09-26,49.0,67.0,97.0,17,Franco da Rocha,SP,-23.3229,-46.729,48.427,49.627
+gaspar-sc-br-to-camboriu-sc-br,2026-09-26,51.0,61.0,76.0,22,Gaspar,SC,-26.9336,-48.9534,56.49,49.463
+gaspar-sc-br-to-timbo-sc-br,2026-09-26,43.0,56.0,71.0,56,Gaspar,SC,-26.9336,-48.9534,45.666,47.495
+goiania-go-br-to-brasilia-df-br,2026-09-26,201.0,174.0,428.0,22,Goiânia,GO,-16.6864,-49.2643,205.047,176.17
+goiania-go-br-to-goianapolis-go-br,2026-09-26,36.0,43.0,75.0,62,Goiânia,GO,-16.6864,-49.2643,39.89,40.678
+goiania-go-br-to-leopoldo-de-bulhoes-go-br,2026-09-26,54.0,63.0,93.0,6,Goiânia,GO,-16.6864,-49.2643,62.879,64.352
+goiania-go-br-to-terezopolis-de-goias-go-br,2026-09-26,33.0,38.0,58.0,79,Goiânia,GO,-16.6864,-49.2643,51.533,51.488
+goiania-go-br-to-trindade-go-br,2026-09-26,17.0,28.0,30.0,26796,Goiânia,GO,-16.6864,-49.2643,27.787,28.632
+gramado-rs-br-to-sao-francisco-de-paula-rs-br,2026-09-26,35.0,49.0,88.0,3,Gramado,RS,-29.3734,-50.8762,44.146,46.792
+gramado-rs-br-to-taquara-rs-br,2026-09-26,44.0,54.0,96.0,21,Gramado,RS,-29.3734,-50.8762,44.06,48.415
+gravatai-rs-br-to-charqueadas-rs-br,2026-09-26,75.0,68.0,133.0,16,Gravataí,RS,-29.9413,-50.9869,77.96,67.6
+gravatai-rs-br-to-sao-sebastiao-do-cai-rs-br,2026-09-26,59.0,57.0,115.0,3,Gravataí,RS,-29.9413,-50.9869,62.37,60.772
+guaiba-rs-br-to-porto-alegre-rs-br,2026-09-26,32.0,35.0,50.0,9862,Guaíba,RS,-30.1086,-51.3233,31.676,31.54
+guaiba-rs-br-to-sao-leopoldo-rs-br,2026-09-26,59.0,55.0,110.0,36,Guaíba,RS,-30.1086,-51.3233,56.427,51.908
+guapimirim-rj-br-to-cachoeiras-de-macacu-rj-br,2026-09-26,38.0,46.0,56.0,8,Guapimirim,RJ,-22.5347,-42.9895,45.25,46.643
+guapimirim-rj-br-to-duque-de-caxias-rj-br,2026-09-26,44.0,50.0,81.0,143,Guapimirim,RJ,-22.5347,-42.9895,54.972,46.155
+guapimirim-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,73.0,84.0,148.0,234,Guapimirim,RJ,-22.5347,-42.9895,73.862,60.567
+guapimirim-rj-br-to-teresopolis-rj-br,2026-09-26,24.0,40.0,47.0,196,Guapimirim,RJ,-22.5347,-42.9895,21.439,29.12
+guarulhos-sp-br-to-ibiuna-sp-br,2026-09-26,100.0,120.0,246.0,13,Guarulhos,SP,-23.4538,-46.5333,103.458,90.547
+guarulhos-sp-br-to-igarata-sp-br,2026-09-26,72.0,73.0,201.0,8,Guarulhos,SP,-23.4538,-46.5333,61.98,58.672
+guarulhos-sp-br-to-itatiba-sp-br,2026-09-26,99.0,92.0,265.0,32,Guarulhos,SP,-23.4538,-46.5333,88.446,74.037
+guarulhos-sp-br-to-itu-sp-br,2026-09-26,118.0,113.0,298.0,28,Guarulhos,SP,-23.4538,-46.5333,113.631,88.188
+guarulhos-sp-br-to-santa-isabel-sp-br,2026-09-26,35.0,47.0,86.0,273,Guarulhos,SP,-23.4538,-46.5333,42.627,40.433
+guarulhos-sp-br-to-taubate-sp-br,2026-09-26,118.0,98.0,295.0,70,Guarulhos,SP,-23.4538,-46.5333,117.798,94.295
+horizonte-ce-br-to-barreira-ce-br,2026-09-26,41.0,49.0,76.0,4,Horizonte,CE,-4.1209,-38.4707,37.478,56.442
+horizonte-ce-br-to-itaitinga-ce-br,2026-09-26,22.0,27.0,42.0,453,Horizonte,CE,-4.1209,-38.4707,22.953,34.367
+hortolandia-sp-br-to-itupeva-sp-br,2026-09-26,41.0,39.0,100.0,28,Hortolândia,SP,-22.8529,-47.2143,51.822,43.342
+hortolandia-sp-br-to-sumare-sp-br,2026-09-26,8.0,17.0,20.0,22051,Hortolândia,SP,-22.8529,-47.2143,9.496,11.367
+ibirite-mg-br-to-belo-horizonte-mg-br,2026-09-26,9.0,23.0,26.0,57597,Ibirité,MG,-20.0252,-44.0569,24.889,29.925
+ibirite-mg-br-to-pedro-leopoldo-mg-br,2026-09-26,57.0,78.0,105.0,14,Ibirité,MG,-20.0252,-44.0569,59.812,56.93
+igarape-mg-br-to-brumadinho-mg-br,2026-09-26,19.0,30.0,41.0,98,Igarapé,MG,-20.0707,-44.2994,19.785,24.647
+igarape-mg-br-to-confins-mg-br,2026-09-26,88.0,95.0,165.0,27,Igarapé,MG,-20.0707,-44.2994,84.915,74.355
+igarassu-pe-br-to-jaboatao-dos-guararapes-pe-br,2026-09-26,41.0,62.0,81.0,443,Igarassu,PE,-7.82881,-34.9013,42.611,43.967
+igarassu-pe-br-to-olinda-pe-br,2026-09-26,20.0,42.0,44.0,2797,Igarassu,PE,-7.82881,-34.9013,23.127,29.357
+igrejinha-rs-br-to-canoas-rs-br,2026-09-26,78.0,79.0,136.0,4,Igrejinha,RS,-29.5693,-50.7919,71.927,78.985
+igrejinha-rs-br-to-gravatai-rs-br,2026-09-26,57.0,64.0,89.0,5,Igrejinha,RS,-29.5693,-50.7919,57.225,60.25
+iguaba-grande-rj-br-to-cabo-frio-rj-br,2026-09-26,27.0,40.0,53.0,554,Iguaba Grande,RJ,-22.8495,-42.2299,31.512,38.365
+iguaba-grande-rj-br-to-marica-rj-br,2026-09-26,80.0,104.0,167.0,7,Iguaba Grande,RJ,-22.8495,-42.2299,87.299,99.13
+iguaba-grande-rj-br-to-rio-das-ostras-rj-br,2026-09-26,54.0,81.0,109.0,7,Iguaba Grande,RJ,-22.8495,-42.2299,58.232,74.547
+iguaba-grande-rj-br-to-saquarema-rj-br,2026-09-26,32.0,50.0,62.0,60,Iguaba Grande,RJ,-22.8495,-42.2299,35.779,56.79
+indaiatuba-sp-br-to-barueri-sp-br,2026-09-26,99.0,89.0,166.0,13,Indaiatuba,SP,-23.0816,-47.2101,97.258,70.807
+indaiatuba-sp-br-to-louveira-sp-br,2026-09-26,40.0,49.0,102.0,13,Indaiatuba,SP,-23.0816,-47.2101,35.168,32.818
+ipojuca-pe-br-to-cabo-de-santo-agostinho-pe-br,2026-09-26,22.0,30.0,43.0,4439,Ipojuca,PE,-8.39303,-35.0609,16.55,17.893
+ipojuca-pe-br-to-jaboatao-dos-guararapes-pe-br,2026-09-26,43.0,60.0,86.0,861,Ipojuca,PE,-8.39303,-35.0609,49.561,46.372
+itaborai-rj-br-to-belford-roxo-rj-br,2026-09-26,70.0,83.0,118.0,22,Itaboraí,RJ,-22.7565,-42.8639,72.122,64.065
+itaborai-rj-br-to-cabo-frio-rj-br,2026-09-26,107.0,104.0,200.0,2,Itaboraí,RJ,-22.7565,-42.8639,104.977,100.717
+itaborai-rj-br-to-duque-de-caxias-rj-br,2026-09-26,59.0,70.0,113.0,141,Itaboraí,RJ,-22.7565,-42.8639,62.176,56.408
+itaborai-rj-br-to-mesquita-rj-br,2026-09-26,75.0,89.0,124.0,10,Itaboraí,RJ,-22.7565,-42.8639,78.18,77.592
+itaborai-rj-br-to-nilopolis-rj-br,2026-09-26,73.0,90.0,138.0,9,Itaboraí,RJ,-22.7565,-42.8639,74.443,68.31
+itaborai-rj-br-to-niteroi-rj-br,2026-09-26,32.0,47.0,58.0,4725,Itaboraí,RJ,-22.7565,-42.8639,35.183,34.797
+itaborai-rj-br-to-nova-iguacu-rj-br,2026-09-26,80.0,92.0,145.0,73,Itaboraí,RJ,-22.7565,-42.8639,77.751,69.69
+itaborai-rj-br-to-queimados-rj-br,2026-09-26,89.0,103.0,162.0,2,Itaboraí,RJ,-22.7565,-42.8639,90.531,80.797
+itaborai-rj-br-to-sao-joao-de-meriti-rj-br,2026-09-26,67.0,77.0,115.0,48,Itaboraí,RJ,-22.7565,-42.8639,68.129,61.338
+itaborai-rj-br-to-saquarema-rj-br,2026-09-26,60.0,76.0,95.0,21,Itaboraí,RJ,-22.7565,-42.8639,68.549,73.953
+itaborai-rj-br-to-tangua-rj-br,2026-09-26,14.0,21.0,28.0,486,Itaboraí,RJ,-22.7565,-42.8639,17.95,17.277
+itaguai-rj-br-to-angra-dos-reis-rj-br,2026-09-26,76.0,80.0,123.0,12,Itaguaí,RJ,-22.8636,-43.7798,85.182,100.045
+itaguai-rj-br-to-mangaratiba-rj-br,2026-09-26,19.0,26.0,41.0,2335,Itaguaí,RJ,-22.8636,-43.7798,33.376,31.122
+itaguai-rj-br-to-mesquita-rj-br,2026-09-26,57.0,63.0,95.0,47,Itaguaí,RJ,-22.8636,-43.7798,54.83,55.618
+itaguai-rj-br-to-nilopolis-rj-br,2026-09-26,52.0,61.0,83.0,71,Itaguaí,RJ,-22.8636,-43.7798,51.093,46.337
+itaguai-rj-br-to-sao-goncalo-rj-br,2026-09-26,94.0,111.0,164.0,20,Itaguaí,RJ,-22.8636,-43.7798,89.793,80.137
+itaguai-rj-br-to-sao-joao-de-meriti-rj-br,2026-09-26,59.0,63.0,93.0,98,Itaguaí,RJ,-22.8636,-43.7798,52.441,46.673
+itaguai-rj-br-to-seropedica-rj-br,2026-09-26,12.0,21.0,24.0,6513,Itaguaí,RJ,-22.8636,-43.7798,16.609,23.05
+itajai-sc-br-to-araquari-sc-br,2026-09-26,65.0,68.0,114.0,14,Itajaí,SC,-26.9101,-48.6705,76.124,69.432
+itajai-sc-br-to-governador-celso-ramos-sc-br,2026-09-26,72.0,79.0,107.0,7,Itajaí,SC,-26.9101,-48.6705,76.562,70.745
+itapecerica-da-serra-sp-br-to-cotia-sp-br,2026-09-26,20.0,40.0,53.0,576,Itapecerica da Serra,SP,-23.7161,-46.8572,20.699,25.965
+itapecerica-da-serra-sp-br-to-guarulhos-sp-br,2026-09-26,70.0,98.0,175.0,91,Itapecerica da Serra,SP,-23.7161,-46.8572,63.16,57.012
+itapema-sc-br-to-barra-velha-sc-br,2026-09-26,62.0,66.0,100.0,23,Itapema,SC,-27.0861,-48.616,61.146,48.455
+itapema-sc-br-to-porto-belo-sc-br,2026-09-26,6.0,15.0,16.0,9423,Itapema,SC,-27.0861,-48.616,14.365,22.168
+itapevi-sp-br-to-ferraz-de-vasconcelos-sp-br,2026-09-26,80.0,119.0,176.0,3,Itapevi,SP,-23.5488,-46.9327,74.312,67.297
+itapevi-sp-br-to-ibiuna-sp-br,2026-09-26,41.0,61.0,87.0,20,Itapevi,SP,-23.5488,-46.9327,45.038,46.572
+itapevi-sp-br-to-itaquaquecetuba-sp-br,2026-09-26,76.0,96.0,185.0,8,Itapevi,SP,-23.5488,-46.9327,76.523,65.387
+itapevi-sp-br-to-jundiai-sp-br,2026-09-26,67.0,71.0,167.0,13,Itapevi,SP,-23.5488,-46.9327,65.012,52.853
+itapevi-sp-br-to-mairinque-sp-br,2026-09-26,35.0,49.0,88.0,68,Itapevi,SP,-23.5488,-46.9327,30.953,34.567
+itapevi-sp-br-to-pirapora-do-bom-jesus-sp-br,2026-09-26,33.0,49.0,83.0,24,Itapevi,SP,-23.5488,-46.9327,33.9,34.27
+itapissuma-pe-br-to-jaboatao-dos-guararapes-pe-br,2026-09-26,49.0,73.0,109.0,93,Itapissuma,PE,-7.76798,-34.8971,52.081,55.722
+itapissuma-pe-br-to-olinda-pe-br,2026-09-26,30.0,52.0,60.0,277,Itapissuma,PE,-7.76798,-34.8971,32.598,41.112
+itaquaquecetuba-sp-br-to-biritiba-mirim-sp-br,2026-09-26,46.0,70.0,101.0,19,Itaquaquecetuba,SP,-23.4835,-46.3457,40.516,45.132
+itaquaquecetuba-sp-br-to-ferraz-de-vasconcelos-sp-br,2026-09-26,9.0,25.0,25.0,5014,Itaquaquecetuba,SP,-23.4835,-46.3457,10.521,14.528
+itaquaquecetuba-sp-br-to-guararema-sp-br,2026-09-26,40.0,46.0,88.0,27,Itaquaquecetuba,SP,-23.4835,-46.3457,46.324,38.295
+itaquaquecetuba-sp-br-to-guarulhos-sp-br,2026-09-26,11.0,22.0,31.0,23759,Itaquaquecetuba,SP,-23.4835,-46.3457,28.86,28.827
+itaquaquecetuba-sp-br-to-itapecerica-da-serra-sp-br,2026-09-26,91.0,112.0,179.0,1,Itaquaquecetuba,SP,-23.4835,-46.3457,85.572,75.7
+itatiaia-rj-br-to-quatis-rj-br,2026-09-26,35.0,38.0,73.0,16,Itatiaia,RJ,-22.4897,-44.5675,36.874,34.088
+itatiba-sp-br-to-braganca-paulista-sp-br,2026-09-26,24.0,30.0,46.0,104,Itatiba,SP,-23.0035,-46.8464,38.984,38.99
+itatiba-sp-br-to-valinhos-sp-br,2026-09-26,22.0,32.0,48.0,130,Itatiba,SP,-23.0035,-46.8464,21.132,21.622
+itu-sp-br-to-campinas-sp-br,2026-09-26,54.0,51.0,128.0,130,Itu,SP,-23.2544,-47.2927,50.117,46.248
+itu-sp-br-to-guarulhos-sp-br,2026-09-26,116.0,118.0,262.0,16,Itu,SP,-23.2544,-47.2927,113.943,89.24
+itupeva-sp-br-to-campinas-sp-br,2026-09-26,27.0,32.0,69.0,849,Itupeva,SP,-23.1526,-47.0593,40.191,39.163
+itupeva-sp-br-to-hortolandia-sp-br,2026-09-26,43.0,43.0,95.0,21,Itupeva,SP,-23.1526,-47.0593,52.979,45.473
+ivoti-rs-br-to-estancia-velha-rs-br,2026-09-26,6.0,13.0,17.0,2938,Ivoti,RS,-29.5995,-51.1533,8.602,13.687
+ivoti-rs-br-to-nova-petropolis-rs-br,2026-09-26,36.0,48.0,78.0,2,Ivoti,RS,-29.5995,-51.1533,33.795,41.983
+jaboatao-dos-guararapes-pe-br-to-carpina-pe-br,2026-09-26,56.0,67.0,106.0,16,Jaboatão dos Guararapes,PE,-8.11298,-35.015,49.858,37.642
+jaboatao-dos-guararapes-pe-br-to-joao-pessoa-pb-br,2026-09-26,134.0,154.0,284.0,6,Jaboatão dos Guararapes,PE,-8.11298,-35.015,131.013,115.075
+jacarei-sp-br-to-santa-isabel-sp-br,2026-09-26,33.0,38.0,59.0,38,Jacareí,SP,-23.2983,-45.9658,33.352,30.597
+jacarei-sp-br-to-sao-paulo-sp-br,2026-09-26,81.0,86.0,170.0,159,Jacareí,SP,-23.2983,-45.9658,80.991,65.263
+jandira-sp-br-to-santana-de-parnaiba-sp-br,2026-09-26,17.0,33.0,45.0,1718,Jandira,SP,-23.5275,-46.9023,17.862,20.582
+jandira-sp-br-to-santo-andre-sp-br,2026-09-26,65.0,97.0,165.0,18,Jandira,SP,-23.5275,-46.9023,51.737,55.345
+japeri-rj-br-to-nilopolis-rj-br,2026-09-26,36.0,53.0,61.0,95,Japeri,RJ,-22.6435,-43.6602,42.389,40.368
+japeri-rj-br-to-niteroi-rj-br,2026-09-26,78.0,96.0,145.0,8,Japeri,RJ,-22.6435,-43.6602,78.779,72.173
+japeri-rj-br-to-paracambi-rj-br,2026-09-26,14.0,27.0,32.0,125,Japeri,RJ,-22.6435,-43.6602,11.356,12.112
+japeri-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,57.0,73.0,100.0,980,Japeri,RJ,-22.6435,-43.6602,68.861,61.802
+japeri-rj-br-to-sao-joao-de-meriti-rj-br,2026-09-26,36.0,49.0,58.0,232,Japeri,RJ,-22.6435,-43.6602,44.008,41.683
+japeri-rj-br-to-seropedica-rj-br,2026-09-26,20.0,26.0,42.0,289,Japeri,RJ,-22.6435,-43.6602,17.986,20.182
+joao-pessoa-pb-br-to-igarassu-pe-br,2026-09-26,92.0,88.0,198.0,4,João Pessoa,PB,-7.11509,-34.8641,92.808,80.007
+joao-pessoa-pb-br-to-olinda-pe-br,2026-09-26,115.0,126.0,208.0,2,João Pessoa,PB,-7.11509,-34.8641,112.178,101.46
+joinville-sc-br-to-barra-velha-sc-br,2026-09-26,52.0,52.0,99.0,112,Joinville,SC,-26.3045,-48.8487,49.018,43.033
+joinville-sc-br-to-sao-francisco-do-sul-sc-br,2026-09-26,52.0,74.0,102.0,190,Joinville,SC,-26.3045,-48.8487,44.003,56.043
+juatuba-mg-br-to-betim-mg-br,2026-09-26,19.0,25.0,42.0,3316,Juatuba,MG,-19.9448,-44.3451,20.282,25.553
+juatuba-mg-br-to-contagem-mg-br,2026-09-26,38.0,44.0,73.0,417,Juatuba,MG,-19.9448,-44.3451,41.106,43.993
+jundiai-sp-br-to-campo-limpo-paulista-sp-br,2026-09-26,17.0,30.0,40.0,4317,Jundiaí,SP,-23.1852,-46.8974,14.303,18.623
+jundiai-sp-br-to-diadema-sp-br,2026-09-26,86.0,103.0,183.0,11,Jundiaí,SP,-23.1852,-46.8974,75.946,66.86
+jundiai-sp-br-to-hortolandia-sp-br,2026-09-26,54.0,52.0,110.0,73,Jundiaí,SP,-23.1852,-46.8974,56.967,43.963
+jundiai-sp-br-to-monte-mor-sp-br,2026-09-26,65.0,59.0,123.0,26,Jundiaí,SP,-23.1852,-46.8974,67.409,53.01
+jundiai-sp-br-to-nova-odessa-sp-br,2026-09-26,67.0,62.0,143.0,14,Jundiaí,SP,-23.1852,-46.8974,70.65,53.305
+jundiai-sp-br-to-sao-bernardo-do-campo-sp-br,2026-09-26,96.0,104.0,212.0,38,Jundiaí,SP,-23.1852,-46.8974,76.363,69.293
+lagoa-santa-mg-br-to-nova-lima-mg-br,2026-09-26,57.0,84.0,125.0,73,Lagoa Santa,MG,-19.6397,-43.8932,57.362,67.65
+lagoa-santa-mg-br-to-sabara-mg-br,2026-09-26,43.0,58.0,76.0,103,Lagoa Santa,MG,-19.6397,-43.8932,51.433,55.227
+limeira-sp-br-to-americana-sp-br,2026-09-26,16.0,20.0,33.0,2155,Limeira,SP,-22.566,-47.397,25.258,23.16
+limeira-sp-br-to-araras-sp-br,2026-09-26,30.0,31.0,70.0,71,Limeira,SP,-22.566,-47.397,27.134,23.983
+londrina-pr-br-to-ibipora-pr-br,2026-09-26,16.0,23.0,27.0,10183,Londrina,PR,-23.304,-51.1691,14.542,19.117
+louveira-sp-br-to-barueri-sp-br,2026-09-26,67.0,71.0,113.0,10,Louveira,SP,-23.0856,-46.9484,66.404,51.497
+louveira-sp-br-to-vinhedo-sp-br,2026-09-26,8.0,13.0,21.0,4639,Louveira,SP,-23.0856,-46.9484,8.74,10.19
+macae-rj-br-to-araruama-rj-br,2026-09-26,100.0,141.0,156.0,6,Macaé,RJ,-22.3768,-41.7848,96.439,117.198
+macae-rj-br-to-armacao-dos-buzios-rj-br,2026-09-26,68.0,120.0,118.0,25,Macaé,RJ,-22.3768,-41.7848,72.381,101.288
+macae-rj-br-to-arraial-do-cabo-rj-br,2026-09-26,94.0,146.0,149.0,4,Macaé,RJ,-22.3768,-41.7848,87.828,121.357
+macae-rj-br-to-cabo-frio-rj-br,2026-09-26,46.0,81.0,84.0,223,Macaé,RJ,-22.3768,-41.7848,74.49,105.027
+macae-rj-br-to-campos-dos-goytacazes-rj-br,2026-09-26,100.0,101.0,168.0,9,Macaé,RJ,-22.3768,-41.7848,105.404,103.565
+macae-rj-br-to-carapebus-rj-br,2026-09-26,24.0,31.0,41.0,67,Macaé,RJ,-22.3768,-41.7848,29.016,34.915
+macae-rj-br-to-casimiro-de-abreu-rj-br,2026-09-26,35.0,59.0,63.0,301,Macaé,RJ,-22.3768,-41.7848,54.8,54.288
+macae-rj-br-to-conceicao-de-macabu-rj-br,2026-09-26,46.0,54.0,75.0,15,Macaé,RJ,-22.3768,-41.7848,48.715,59.375
+macae-rj-br-to-quissama-rj-br,2026-09-26,49.0,57.0,76.0,8,Macaé,RJ,-22.3768,-41.7848,54.755,58.678
+macae-rj-br-to-rio-das-ostras-rj-br,2026-09-26,22.0,37.0,43.0,9383,Macaé,RJ,-22.3768,-41.7848,28.541,34.095
+macae-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,201.0,190.0,352.0,13,Macaé,RJ,-22.3768,-41.7848,186.121,160.695
+macae-rj-br-to-sao-pedro-da-aldeia-rj-br,2026-09-26,73.0,113.0,111.0,14,Macaé,RJ,-22.3768,-41.7848,72.776,93.785
+maceio-al-br-to-japaratinga-al-br,2026-09-26,123.0,142.0,231.0,4,Maceió,AL,-9.66599,-35.735,121.138,115.853
+maceio-al-br-to-sao-miguel-dos-milagres-al-br,2026-09-26,96.0,135.0,212.0,6,Maceió,AL,-9.66599,-35.735,96.081,99.683
+mage-rj-br-to-guapimirim-rj-br,2026-09-26,6.0,14.0,19.0,2452,Magé,RJ,-22.6632,-43.0315,17.832,18.662
+mage-rj-br-to-japeri-rj-br,2026-09-26,60.0,62.0,95.0,13,Magé,RJ,-22.6632,-43.0315,72.336,60.737
+mage-rj-br-to-marica-rj-br,2026-09-26,73.0,98.0,156.0,36,Magé,RJ,-22.6632,-43.0315,57.495,66.61
+mage-rj-br-to-niteroi-rj-br,2026-09-26,59.0,82.0,118.0,171,Magé,RJ,-22.6632,-43.0315,45.86,45.025
+mage-rj-br-to-nova-iguacu-rj-br,2026-09-26,54.0,66.0,86.0,317,Magé,RJ,-22.6632,-43.0315,60.669,51.252
+mage-rj-br-to-petropolis-rj-br,2026-09-26,24.0,53.0,44.0,319,Magé,RJ,-22.6632,-43.0315,41.876,54.887
+mairinque-sp-br-to-aracariguama-sp-br,2026-09-26,24.0,30.0,49.0,160,Mairinque,SP,-23.5398,-47.185,21.533,23.025
+mairinque-sp-br-to-vargem-grande-paulista-sp-br,2026-09-26,28.0,34.0,66.0,21,Mairinque,SP,-23.5398,-47.185,24.339,25.528
+mairipora-sp-br-to-braganca-paulista-sp-br,2026-09-26,48.0,49.0,114.0,26,Mairiporã,SP,-23.3171,-46.5897,49.739,44.352
+mairipora-sp-br-to-caieiras-sp-br,2026-09-26,19.0,31.0,46.0,248,Mairiporã,SP,-23.3171,-46.5897,23.236,28.578
+mangaratiba-rj-br-to-angra-dos-reis-rj-br,2026-09-26,27.0,32.0,62.0,290,Mangaratiba,RJ,-22.9594,-44.0409,56.024,72.962
+mangaratiba-rj-br-to-itaguai-rj-br,2026-09-26,19.0,25.0,68.0,525,Mangaratiba,RJ,-22.9594,-44.0409,33.503,30.335
+mangaratiba-rj-br-to-japeri-rj-br,2026-09-26,57.0,60.0,152.0,17,Mangaratiba,RJ,-22.9594,-44.0409,62.642,55.297
+mangaratiba-rj-br-to-niteroi-rj-br,2026-09-26,112.0,130.0,289.0,9,Mangaratiba,RJ,-22.9594,-44.0409,113.25,98.707
+mangaratiba-rj-br-to-queimados-rj-br,2026-09-26,60.0,64.0,162.0,21,Mangaratiba,RJ,-22.9594,-44.0409,72.478,61.253
+mangaratiba-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,57.0,64.0,149.0,585,Mangaratiba,RJ,-22.9594,-44.0409,103.332,88.335
+maracanau-ce-br-to-aquiraz-ce-br,2026-09-26,33.0,46.0,66.0,509,Maracanaú,CE,-3.86699,-38.6259,32.162,37.477
+maracanau-ce-br-to-eusebio-ce-br,2026-09-26,20.0,32.0,44.0,1053,Maracanaú,CE,-3.86699,-38.6259,24.752,28.247
+marica-rj-br-to-belford-roxo-rj-br,2026-09-26,78.0,103.0,132.0,64,Maricá,RJ,-22.9354,-42.8246,84.141,93.372
+marica-rj-br-to-cabo-frio-rj-br,2026-09-26,108.0,133.0,207.0,27,Maricá,RJ,-22.9354,-42.8246,102.269,118.693
+marica-rj-br-to-duque-de-caxias-rj-br,2026-09-26,72.0,93.0,121.0,254,Maricá,RJ,-22.9354,-42.8246,74.195,85.715
+marica-rj-br-to-guapimirim-rj-br,2026-09-26,67.0,88.0,154.0,8,Maricá,RJ,-22.9354,-42.8246,71.106,84.737
+marica-rj-br-to-itaguai-rj-br,2026-09-26,120.0,147.0,197.0,1,Maricá,RJ,-22.9354,-42.8246,124.744,127.932
+marica-rj-br-to-japeri-rj-br,2026-09-26,108.0,130.0,205.0,4,Maricá,RJ,-22.9354,-42.8246,125.906,126.875
+marica-rj-br-to-niteroi-rj-br,2026-09-26,25.0,42.0,46.0,15858,Maricá,RJ,-22.9354,-42.8246,42.734,59.878
+marica-rj-br-to-queimados-rj-br,2026-09-26,96.0,117.0,154.0,12,Maricá,RJ,-22.9354,-42.8246,102.55,110.103
+marica-rj-br-to-saquarema-rj-br,2026-09-26,32.0,43.0,56.0,518,Maricá,RJ,-22.9354,-42.8246,42.382,56.69
+maringa-pr-br-to-astorga-pr-br,2026-09-26,49.0,58.0,85.0,11,Maringá,PR,-23.4205,-51.9333,48.646,45.99
+maringa-pr-br-to-ivatuba-pr-br,2026-09-26,32.0,36.0,48.0,11,Maringá,PR,-23.4205,-51.9333,45.133,43.782
+matozinhos-mg-br-to-confins-mg-br,2026-09-26,19.0,24.0,43.0,285,Matozinhos,MG,-19.5543,-44.0868,17.213,14.243
+matozinhos-mg-br-to-lagoa-santa-mg-br,2026-09-26,33.0,39.0,62.0,151,Matozinhos,MG,-19.5543,-44.0868,38.265,32.575
+maua-sp-br-to-mogi-das-cruzes-sp-br,2026-09-26,46.0,70.0,118.0,47,Mauá,SP,-23.6677,-46.4613,40.363,52.118
+maua-sp-br-to-sao-vicente-sp-br,2026-09-26,67.0,79.0,172.0,15,Mauá,SP,-23.6677,-46.4613,69.285,63.402
+mesquita-rj-br-to-belford-roxo-rj-br,2026-09-26,6.0,18.0,17.0,7187,Mesquita,RJ,-22.8028,-43.4601,11.278,18.612
+mesquita-rj-br-to-duque-de-caxias-rj-br,2026-09-26,24.0,38.0,40.0,1988,Mesquita,RJ,-22.8028,-43.4601,20.209,27.6
+mesquita-rj-br-to-guapimirim-rj-br,2026-09-26,73.0,83.0,115.0,3,Mesquita,RJ,-22.8028,-43.4601,76.973,70.193
+mesquita-rj-br-to-itaborai-rj-br,2026-09-26,76.0,102.0,148.0,11,Mesquita,RJ,-22.8028,-43.4601,77.554,75.97
+mesquita-rj-br-to-itaguai-rj-br,2026-09-26,57.0,67.0,92.0,59,Mesquita,RJ,-22.8028,-43.4601,54.507,54.942
+mesquita-rj-br-to-japeri-rj-br,2026-09-26,32.0,49.0,57.0,103,Mesquita,RJ,-22.8028,-43.4601,43.072,49.02
+mesquita-rj-br-to-mangaratiba-rj-br,2026-09-26,75.0,85.0,123.0,35,Mesquita,RJ,-22.8028,-43.4601,85.794,80.953
+mesquita-rj-br-to-marica-rj-br,2026-09-26,80.0,111.0,137.0,28,Mesquita,RJ,-22.8028,-43.4601,87.332,104.645
+mesquita-rj-br-to-nilopolis-rj-br,2026-09-26,3.0,12.0,12.0,24331,Mesquita,RJ,-22.8028,-43.4601,3.846,9.715
+mogi-das-cruzes-sp-br-to-barueri-sp-br,2026-09-26,89.0,110.0,236.0,23,Mogi das Cruzes,SP,-23.5208,-46.1854,86.037,71.978
+mogi-das-cruzes-sp-br-to-biritiba-mirim-sp-br,2026-09-26,22.0,32.0,50.0,1232,Mogi das Cruzes,SP,-23.5208,-46.1854,19.492,21.272
+mogi-das-cruzes-sp-br-to-carapicuiba-sp-br,2026-09-26,89.0,101.0,176.0,3,Mogi das Cruzes,SP,-23.5208,-46.1854,82.837,70.655
+mogi-das-cruzes-sp-br-to-cotia-sp-br,2026-09-26,104.0,125.0,262.0,2,Mogi das Cruzes,SP,-23.5208,-46.1854,102.475,85.957
+mogi-das-cruzes-sp-br-to-diadema-sp-br,2026-09-26,76.0,81.0,200.0,11,Mogi das Cruzes,SP,-23.5208,-46.1854,73.425,67.488
+mogi-das-cruzes-sp-br-to-suzano-sp-br,2026-09-26,11.0,26.0,31.0,20928,Mogi das Cruzes,SP,-23.5208,-46.1854,14.943,20.517
+monte-mor-sp-br-to-elias-fausto-sp-br,2026-09-26,19.0,26.0,45.0,11,Monte Mor,SP,-22.945,-47.3122,17.552,18.218
+monte-mor-sp-br-to-valinhos-sp-br,2026-09-26,43.0,42.0,86.0,82,Monte Mor,SP,-22.945,-47.3122,48.258,40.697
+montenegro-rs-br-to-brochier-rs-br,2026-09-26,24.0,30.0,43.0,24,Montenegro,RS,-29.6824,-51.4679,24.668,27.092
+montenegro-rs-br-to-esteio-rs-br,2026-09-26,48.0,46.0,87.0,17,Montenegro,RS,-29.6824,-51.4679,50.934,51.677
+moreno-pe-br-to-camaragibe-pe-br,2026-09-26,27.0,38.0,50.0,152,Moreno,PE,-8.10871,-35.0835,25.482,26.525
+moreno-pe-br-to-pombos-pe-br,2026-09-26,32.0,32.0,50.0,10,Moreno,PE,-8.10871,-35.0835,38.755,33.138
+navegantes-sc-br-to-luiz-alves-sc-br,2026-09-26,32.0,38.0,59.0,24,Navegantes,SC,-26.8943,-48.6546,41.126,45.08
+navegantes-sc-br-to-pomerode-sc-br,2026-09-26,76.0,78.0,154.0,26,Navegantes,SC,-26.8943,-48.6546,75.091,72.778
+nilopolis-rj-br-to-belford-roxo-rj-br,2026-09-26,11.0,29.0,25.0,1790,Nilópolis,RJ,-22.8057,-43.4233,8.146,9.53
+nilopolis-rj-br-to-duque-de-caxias-rj-br,2026-09-26,22.0,39.0,42.0,1649,Nilópolis,RJ,-22.8057,-43.4233,16.472,18.218
+nilopolis-rj-br-to-itaborai-rj-br,2026-09-26,73.0,96.0,145.0,9,Nilópolis,RJ,-22.8057,-43.4233,73.817,66.588
+nilopolis-rj-br-to-itaguai-rj-br,2026-09-26,52.0,60.0,82.0,62,Nilópolis,RJ,-22.8057,-43.4233,50.77,45.56
+nilopolis-rj-br-to-mangaratiba-rj-br,2026-09-26,72.0,79.0,123.0,42,Nilópolis,RJ,-22.8057,-43.4233,82.058,71.572
+nilopolis-rj-br-to-mesquita-rj-br,2026-09-26,3.0,11.0,12.0,22897,Nilópolis,RJ,-22.8057,-43.4233,3.846,9.722
+nilopolis-rj-br-to-petropolis-rj-br,2026-09-26,78.0,104.0,145.0,2,Nilópolis,RJ,-22.8057,-43.4233,63.627,59.513
+nilopolis-rj-br-to-queimados-rj-br,2026-09-26,25.0,43.0,46.0,388,Nilópolis,RJ,-22.8057,-43.4233,22.151,24.355
+nilopolis-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,12.0,26.0,28.0,38573,Nilópolis,RJ,-22.8057,-43.4233,32.838,31.357
+niteroi-rj-br-to-araruama-rj-br,2026-09-26,96.0,104.0,157.0,2,Niterói,RJ,-22.8832,-43.1034,102.587,93.52
+niteroi-rj-br-to-armacao-dos-buzios-rj-br,2026-09-26,161.0,184.0,650.0,2,Niterói,RJ,-22.8832,-43.1034,153.923,153.8
+niteroi-rj-br-to-belford-roxo-rj-br,2026-09-26,46.0,65.0,93.0,192,Niterói,RJ,-22.8832,-43.1034,41.065,37.305
+niteroi-rj-br-to-cabo-frio-rj-br,2026-09-26,144.0,153.0,332.0,1,Niterói,RJ,-22.8832,-43.1034,137.517,126.698
+niteroi-rj-br-to-itaguai-rj-br,2026-09-26,86.0,98.0,162.0,34,Niterói,RJ,-22.8832,-43.1034,81.668,71.865
+niteroi-rj-br-to-japeri-rj-br,2026-09-26,76.0,85.0,170.0,17,Niterói,RJ,-22.8832,-43.1034,82.83,70.808
+niteroi-rj-br-to-mage-rj-br,2026-09-26,59.0,75.0,122.0,141,Niterói,RJ,-22.8832,-43.1034,46.543,43.403
+niteroi-rj-br-to-mangaratiba-rj-br,2026-09-26,110.0,112.0,214.0,7,Niterói,RJ,-22.8832,-43.1034,112.956,97.877
+niteroi-rj-br-to-mesquita-rj-br,2026-09-26,48.0,65.0,96.0,134,Niterói,RJ,-22.8832,-43.1034,47.123,50.832
+niteroi-rj-br-to-nilopolis-rj-br,2026-09-26,46.0,68.0,97.0,131,Niterói,RJ,-22.8832,-43.1034,43.385,41.55
+niteroi-rj-br-to-nova-iguacu-rj-br,2026-09-26,52.0,70.0,108.0,608,Niterói,RJ,-22.8832,-43.1034,46.694,42.93
+niteroi-rj-br-to-petropolis-rj-br,2026-09-26,100.0,132.0,188.0,2,Niterói,RJ,-22.8832,-43.1034,73.386,67.508
+niteroi-rj-br-to-queimados-rj-br,2026-09-26,64.0,79.0,121.0,51,Niterói,RJ,-22.8832,-43.1034,59.474,54.037
+niteroi-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,27.0,42.0,61.0,52596,Niterói,RJ,-22.8832,-43.1034,18.054,19.597
+niteroi-rj-br-to-seropedica-rj-br,2026-09-26,83.0,97.0,160.0,25,Niterói,RJ,-22.8832,-43.1034,82.779,69.735
+nova-friburgo-rj-br-to-bom-jardim-rj-br,2026-09-26,24.0,42.0,73.0,3,Nova Friburgo,RJ,-22.2932,-42.5377,25.607,29.028
+nova-iguacu-rj-br-to-belford-roxo-rj-br,2026-09-26,8.0,20.0,20.0,44814,Nova Iguaçu,RJ,-22.7556,-43.4603,8.179,9.022
+nova-iguacu-rj-br-to-duque-de-caxias-rj-br,2026-09-26,28.0,41.0,50.0,9209,Nova Iguaçu,RJ,-22.7556,-43.4603,20.857,20.555
+nova-iguacu-rj-br-to-japeri-rj-br,2026-09-26,24.0,37.0,45.0,2907,Nova Iguaçu,RJ,-22.7556,-43.4603,37.526,33.408
+nova-iguacu-rj-br-to-mage-rj-br,2026-09-26,52.0,66.0,87.0,297,Nova Iguaçu,RJ,-22.7556,-43.4603,59.998,50.462
+nova-iguacu-rj-br-to-marica-rj-br,2026-09-26,88.0,120.0,155.0,113,Nova Iguaçu,RJ,-22.7556,-43.4603,87.61,97.245
+nova-iguacu-rj-br-to-miguel-pereira-rj-br,2026-09-26,67.0,89.0,111.0,14,Nova Iguaçu,RJ,-22.7556,-43.4603,86.054,80.042
+nova-iguacu-rj-br-to-nilopolis-rj-br,2026-09-26,11.0,25.0,26.0,19637,Nova Iguaçu,RJ,-22.7556,-43.4603,7.97,8.247
+nova-iguacu-rj-br-to-seropedica-rj-br,2026-09-26,12.0,22.0,27.0,4918,Nova Iguaçu,RJ,-22.7556,-43.4603,37.474,32.335
+nova-lima-mg-br-to-esmeraldas-mg-br,2026-09-26,52.0,74.0,115.0,41,Nova Lima,MG,-19.9758,-43.8509,73.822,84.767
+nova-lima-mg-br-to-juatuba-mg-br,2026-09-26,62.0,73.0,127.0,10,Nova Lima,MG,-19.9758,-43.8509,68.124,75.153
+nova-santa-rita-rs-br-to-campo-bom-rs-br,2026-09-26,43.0,47.0,65.0,3,Nova Santa Rita,RS,-29.8525,-51.2837,42.553,45.915
+nova-santa-rita-rs-br-to-sapucaia-do-sul-rs-br,2026-09-26,20.0,24.0,37.0,851,Nova Santa Rita,RS,-29.8525,-51.2837,20.966,22.698
+novo-hamburgo-rs-br-to-charqueadas-rs-br,2026-09-26,92.0,83.0,180.0,4,Novo Hamburgo,RS,-29.6875,-51.1328,91.546,84.688
+novo-hamburgo-rs-br-to-dois-irmaos-rs-br,2026-09-26,16.0,22.0,30.0,3485,Novo Hamburgo,RS,-29.6875,-51.1328,18.079,22.89
+novo-hamburgo-rs-br-to-montenegro-rs-br,2026-09-26,44.0,50.0,90.0,78,Novo Hamburgo,RS,-29.6875,-51.1328,43.633,43.732
+novo-hamburgo-rs-br-to-portao-rs-br,2026-09-26,16.0,22.0,30.0,3039,Novo Hamburgo,RS,-29.6875,-51.1328,17.579,20.527
+novo-hamburgo-rs-br-to-tres-coroas-rs-br,2026-09-26,57.0,60.0,109.0,22,Novo Hamburgo,RS,-29.6875,-51.1328,52.124,61.483
+novo-hamburgo-rs-br-to-viamao-rs-br,2026-09-26,59.0,65.0,100.0,101,Novo Hamburgo,RS,-29.6875,-51.1328,58.072,59.63
+olinda-pe-br-to-camaragibe-pe-br,2026-09-26,22.0,51.0,47.0,1000,Olinda,PE,-8.01017,-34.8545,19.247,23.553
+olinda-pe-br-to-vitoria-de-santo-antao-pe-br,2026-09-26,57.0,78.0,106.0,34,Olinda,PE,-8.01017,-34.8545,57.966,49.07
+osasco-sp-br-to-caieiras-sp-br,2026-09-26,30.0,42.0,76.0,286,Osasco,SP,-23.5324,-46.7916,31.506,33.358
+osasco-sp-br-to-diadema-sp-br,2026-09-26,36.0,61.0,95.0,238,Osasco,SP,-23.5324,-46.7916,32.584,38.252
+osasco-sp-br-to-embu-guacu-sp-br,2026-09-26,48.0,73.0,120.0,38,Osasco,SP,-23.5324,-46.7916,43.327,49.71
+osasco-sp-br-to-itapecerica-da-serra-sp-br,2026-09-26,30.0,48.0,80.0,385,Osasco,SP,-23.5324,-46.7916,27.947,30.878
+osasco-sp-br-to-louveira-sp-br,2026-09-26,67.0,64.0,134.0,90,Osasco,SP,-23.5324,-46.7916,64.944,52.063
+osasco-sp-br-to-vinhedo-sp-br,2026-09-26,72.0,65.0,151.0,110,Osasco,SP,-23.5324,-46.7916,71.535,56.813
+pacajus-ce-br-to-caucaia-ce-br,2026-09-26,67.0,79.0,134.0,14,Pacajus,CE,-4.17107,-38.465,64.823,65.045
+pacajus-ce-br-to-pacatuba-ce-br,2026-09-26,48.0,56.0,94.0,10,Pacajus,CE,-4.17107,-38.465,38.587,40.168
+palhoca-sc-br-to-paulo-lopes-sc-br,2026-09-26,28.0,31.0,63.0,41,Palhoça,SC,-27.6455,-48.6697,39.931,34.88
+palhoca-sc-br-to-tijucas-sc-br,2026-09-26,57.0,52.0,91.0,45,Palhoça,SC,-27.6455,-48.6697,51.617,40.917
+paraty-rj-br-to-angra-dos-reis-rj-br,2026-09-26,73.0,76.0,179.0,113,Paraty,RJ,-23.2221,-44.7175,97.572,102.773
+parnamirim-rn-br-to-canguaretama-rn-br,2026-09-26,70.0,73.0,110.0,4,Parnamirim,RN,-5.91116,-35.271,61.158,53.547
+parnamirim-rn-br-to-macaiba-rn-br,2026-09-26,9.0,18.0,19.0,9489,Parnamirim,RN,-5.91116,-35.271,15.23,16.477
+parobe-rs-br-to-novo-hamburgo-rs-br,2026-09-26,33.0,39.0,61.0,482,Parobé,RS,-29.6243,-50.8312,35.096,41.483
+parobe-rs-br-to-taquara-rs-br,2026-09-26,8.0,12.0,19.0,7125,Parobé,RS,-29.6243,-50.8312,8.291,11.507
+paulinia-sp-br-to-monte-mor-sp-br,2026-09-26,30.0,45.0,63.0,67,Paulínia,SP,-22.7542,-47.1488,33.103,36.462
+paulista-pe-br-to-ilha-de-itamaraca-pe-br,2026-09-26,33.0,58.0,62.0,721,Paulista,PE,-7.93401,-34.8684,32.002,36.06
+paulista-pe-br-to-olinda-pe-br,2026-09-26,9.0,22.0,22.0,56244,Paulista,PE,-7.93401,-34.8684,13.078,14.853
+pedro-leopoldo-mg-br-to-lagoa-santa-mg-br,2026-09-26,25.0,29.0,49.0,871,Pedro Leopoldo,MG,-19.6308,-44.0383,28.519,27.983
+pedro-leopoldo-mg-br-to-matozinhos-mg-br,2026-09-26,8.0,15.0,23.0,4668,Pedro Leopoldo,MG,-19.6308,-44.0383,12.353,12.692
+petropolis-rj-br-to-areal-rj-br,2026-09-26,30.0,38.0,87.0,27,Petrópolis,RJ,-22.52,-43.1926,46.41,43.405
+petropolis-rj-br-to-duque-de-caxias-rj-br,2026-09-26,35.0,49.0,87.0,306,Petrópolis,RJ,-22.52,-43.1926,46.869,46.085
+petropolis-rj-br-to-nova-iguacu-rj-br,2026-09-26,68.0,78.0,176.0,9,Petrópolis,RJ,-22.52,-43.1926,60.045,59.785
+petropolis-rj-br-to-teresopolis-rj-br,2026-09-26,48.0,78.0,102.0,25,Petrópolis,RJ,-22.52,-43.1926,55.682,71.333
+pindamonhangaba-sp-br-to-aparecida-sp-br,2026-09-26,24.0,28.0,42.0,590,Pindamonhangaba,SP,-22.9246,-45.4613,31.212,33.71
+pindamonhangaba-sp-br-to-roseira-sp-br,2026-09-26,12.0,17.0,24.0,756,Pindamonhangaba,SP,-22.9246,-45.4613,18.779,22.367
+pinheiral-rj-br-to-barra-do-pirai-rj-br,2026-09-26,14.0,27.0,33.0,96,Pinheiral,RJ,-22.5172,-44.0022,26.314,36.665
+pinheiral-rj-br-to-volta-redonda-rj-br,2026-09-26,12.0,26.0,31.0,3423,Pinheiral,RJ,-22.5172,-44.0022,15.348,21.56
+piracicaba-sp-br-to-sorocaba-sp-br,2026-09-26,108.0,100.0,257.0,8,Piracicaba,SP,-22.7338,-47.6476,107.672,87.053
+piracicaba-sp-br-to-sumare-sp-br,2026-09-26,49.0,51.0,112.0,42,Piracicaba,SP,-22.7338,-47.6476,44.835,38.625
+poa-sp-br-to-barueri-sp-br,2026-09-26,75.0,98.0,196.0,7,Poá,SP,-23.5333,-46.3473,68.075,64.182
+poa-sp-br-to-guarulhos-sp-br,2026-09-26,25.0,44.0,67.0,767,Poá,SP,-23.5333,-46.3473,30.314,35.912
+portao-rs-br-to-alvorada-rs-br,2026-09-26,52.0,60.0,92.0,17,Portão,RS,-29.7015,-51.2429,49.858,52.075
+portao-rs-br-to-montenegro-rs-br,2026-09-26,28.0,32.0,61.0,65,Portão,RS,-29.7015,-51.2429,28.886,28.822
+porto-alegre-rs-br-to-garibaldi-rs-br,2026-09-26,110.0,100.0,276.0,5,Porto Alegre,RS,-30.0318,-51.2065,113.273,107.515
+porto-alegre-rs-br-to-imbe-rs-br,2026-09-26,124.0,111.0,245.0,5,Porto Alegre,RS,-30.0318,-51.2065,123.182,98.935
+porto-alegre-rs-br-to-sao-sebastiao-do-cai-rs-br,2026-09-26,65.0,66.0,151.0,26,Porto Alegre,RS,-30.0318,-51.2065,65.653,64.135
+porto-alegre-rs-br-to-xangri-la-rs-br,2026-09-26,129.0,114.0,271.0,3,Porto Alegre,RS,-30.0318,-51.2065,133.069,108.018
+porto-belo-sc-br-to-balneario-camboriu-sc-br,2026-09-26,25.0,38.0,50.0,668,Porto Belo,SC,-27.1586,-48.5469,29.347,32.14
+porto-belo-sc-br-to-palhoca-sc-br,2026-09-26,67.0,64.0,104.0,13,Porto Belo,SC,-27.1586,-48.5469,66.866,60.617
+porto-real-rj-br-to-itatiaia-rj-br,2026-09-26,27.0,28.0,59.0,68,Porto Real,RJ,-22.4175,-44.2952,32.161,26.253
+praia-grande-sp-br-to-itaquaquecetuba-sp-br,2026-09-26,112.0,113.0,262.0,5,Praia Grande,SP,-24.0084,-46.4121,108.837,88.54
+praia-grande-sp-br-to-santo-andre-sp-br,2026-09-26,68.0,81.0,200.0,23,Praia Grande,SP,-24.0084,-46.4121,65.344,56.207
+quatis-rj-br-to-barra-mansa-rj-br,2026-09-26,20.0,27.0,44.0,43,Quatis,RJ,-22.4045,-44.2597,28.538,29.055
+quatis-rj-br-to-volta-redonda-rj-br,2026-09-26,41.0,51.0,82.0,10,Quatis,RJ,-22.4045,-44.2597,37.904,43.313
+queimados-rj-br-to-itaborai-rj-br,2026-09-26,92.0,111.0,163.0,3,Queimados,RJ,-22.7102,-43.5518,91.113,80.192
+queimados-rj-br-to-mangaratiba-rj-br,2026-09-26,60.0,66.0,117.0,38,Queimados,RJ,-22.7102,-43.5518,73.147,61.957
+queimados-rj-br-to-miguel-pereira-rj-br,2026-09-26,56.0,81.0,181.0,2,Queimados,RJ,-22.7102,-43.5518,79.207,76.865
+queimados-rj-br-to-nilopolis-rj-br,2026-09-26,25.0,43.0,43.0,464,Queimados,RJ,-22.7102,-43.5518,21.417,23.395
+queimados-rj-br-to-niteroi-rj-br,2026-09-26,64.0,89.0,122.0,49,Queimados,RJ,-22.7102,-43.5518,60.052,55.332
+queimados-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,46.0,65.0,78.0,3407,Queimados,RJ,-22.7102,-43.5518,50.134,44.96
+queimados-rj-br-to-sao-joao-de-meriti-rj-br,2026-09-26,27.0,38.0,43.0,957,Queimados,RJ,-22.7102,-43.5518,25.281,24.842
+recife-pe-br-to-aracoiaba-pe-br,2026-09-26,65.0,84.0,128.0,17,Recife,PE,-8.04666,-34.8771,53.012,56.103
+recife-pe-br-to-escada-pe-br,2026-09-26,60.0,71.0,114.0,55,Recife,PE,-8.04666,-34.8771,60.091,58.183
+recife-pe-br-to-olinda-pe-br,2026-09-26,11.0,27.0,28.0,98473,Recife,PE,-8.04666,-34.8771,5.299,7.145
+recife-pe-br-to-sao-jose-da-coroa-grande-pe-br,2026-09-26,112.0,138.0,195.0,3,Recife,PE,-8.04666,-34.8771,117.472,115.487
+recife-pe-br-to-tamandare-pe-br,2026-09-26,96.0,120.0,179.0,41,Recife,PE,-8.04666,-34.8771,106.217,105.413
+recife-pe-br-to-tracunhaem-pe-br,2026-09-26,59.0,63.0,96.0,2,Recife,PE,-8.04666,-34.8771,61.855,53.382
+resende-rj-br-to-itatiaia-rj-br,2026-09-26,12.0,18.0,31.0,6037,Resende,RJ,-22.4705,-44.4509,14.869,14.645
+resende-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,155.0,161.0,327.0,11,Resende,RJ,-22.4705,-44.4509,164.247,139.423
+ribeirao-das-neves-mg-br-to-confins-mg-br,2026-09-26,35.0,47.0,76.0,527,Ribeirão das Neves,MG,-19.7621,-44.0844,44.319,39.722
+ribeirao-das-neves-mg-br-to-nova-lima-mg-br,2026-09-26,41.0,64.0,84.0,407,Ribeirão das Neves,MG,-19.7621,-44.0844,53.587,59.807
+ribeirao-pires-sp-br-to-cotia-sp-br,2026-09-26,86.0,87.0,212.0,2,Ribeirão Pires,SP,-23.7067,-46.4058,66.661,76.662
+ribeirao-pires-sp-br-to-mogi-das-cruzes-sp-br,2026-09-26,36.0,61.0,84.0,53,Ribeirão Pires,SP,-23.7067,-46.4058,38.958,50.668
+ribeirao-preto-sp-br-to-cajuru-sp-br,2026-09-26,62.0,52.0,116.0,17,Ribeirão Preto,SP,-21.1699,-47.8099,63.539,52.23
+ribeirao-preto-sp-br-to-guatapara-sp-br,2026-09-26,65.0,56.0,115.0,3,Ribeirão Preto,SP,-21.1699,-47.8099,62.529,53.275
+rio-das-ostras-rj-br-to-conceicao-de-macabu-rj-br,2026-09-26,80.0,86.0,131.0,2,Rio das Ostras,RJ,-22.5174,-41.9475,76.829,90.295
+rio-das-ostras-rj-br-to-iguaba-grande-rj-br,2026-09-26,54.0,78.0,80.0,4,Rio das Ostras,RJ,-22.5174,-41.9475,58.986,74.353
+rio-das-ostras-rj-br-to-sao-pedro-da-aldeia-rj-br,2026-09-26,46.0,69.0,72.0,109,Rio das Ostras,RJ,-22.5174,-41.9475,46.192,63.155
+rio-de-janeiro-rj-br-to-armacao-dos-buzios-rj-br,2026-09-26,184.0,202.0,438.0,10,Rio de Janeiro,RJ,-22.9129,-43.2003,169.498,168.165
+rio-de-janeiro-rj-br-to-barra-do-pirai-rj-br,2026-09-26,115.0,158.0,253.0,12,Rio de Janeiro,RJ,-22.9129,-43.2003,119.208,103.677
+rio-de-janeiro-rj-br-to-campos-dos-goytacazes-rj-br,2026-09-26,294.0,285.0,553.0,5,Rio de Janeiro,RJ,-22.9129,-43.2003,276.731,240.927
+rio-de-janeiro-rj-br-to-duque-de-caxias-rj-br,2026-09-26,22.0,34.0,47.0,98183,Rio de Janeiro,RJ,-22.9129,-43.2003,22.017,20.583
+rio-de-janeiro-rj-br-to-engenheiro-paulo-de-frontin-rj-br,2026-09-26,96.0,144.0,154.0,5,Rio de Janeiro,RJ,-22.9129,-43.2003,91.955,76.478
+rio-de-janeiro-rj-br-to-guarulhos-sp-br,2026-09-26,419.0,394.0,865.0,2,Rio de Janeiro,RJ,-22.9129,-43.2003,414.737,312.102
+rio-de-janeiro-rj-br-to-itaguai-rj-br,2026-09-26,28.0,36.0,48.0,13223,Rio de Janeiro,RJ,-22.9129,-43.2003,72.567,62.8
+rio-de-janeiro-rj-br-to-itatiaia-rj-br,2026-09-26,166.0,194.0,351.0,9,Rio de Janeiro,RJ,-22.9129,-43.2003,175.482,137.138
+rio-de-janeiro-rj-br-to-japeri-rj-br,2026-09-26,56.0,71.0,105.0,989,Rio de Janeiro,RJ,-22.9129,-43.2003,73.729,61.743
+rio-de-janeiro-rj-br-to-juiz-de-fora-mg-br,2026-09-26,185.0,187.0,435.0,3,Rio de Janeiro,RJ,-22.9129,-43.2003,181.582,151.287
+rio-de-janeiro-rj-br-to-macae-rj-br,2026-09-26,201.0,201.0,405.0,23,Rio de Janeiro,RJ,-22.9129,-43.2003,186.965,160.347
+rio-de-janeiro-rj-br-to-mendes-rj-br,2026-09-26,91.0,139.0,198.0,2,Rio de Janeiro,RJ,-22.9129,-43.2003,98.463,81.962
+rio-de-janeiro-rj-br-to-mesquita-rj-br,2026-09-26,20.0,36.0,46.0,16728,Rio de Janeiro,RJ,-22.9129,-43.2003,38.022,41.767
+rio-de-janeiro-rj-br-to-miguel-pereira-rj-br,2026-09-26,97.0,126.0,165.0,17,Rio de Janeiro,RJ,-22.9129,-43.2003,122.257,108.377
+rio-de-janeiro-rj-br-to-niteroi-rj-br,2026-09-26,28.0,45.0,72.0,53591,Rio de Janeiro,RJ,-22.9129,-43.2003,18.66,20.727
+rio-de-janeiro-rj-br-to-nova-friburgo-rj-br,2026-09-26,155.0,185.0,328.0,13,Rio de Janeiro,RJ,-22.9129,-43.2003,135.179,148.6
+rio-de-janeiro-rj-br-to-nova-iguacu-rj-br,2026-09-26,28.0,46.0,56.0,65507,Rio de Janeiro,RJ,-22.9129,-43.2003,37.593,33.865
+rio-de-janeiro-rj-br-to-paracambi-rj-br,2026-09-26,68.0,85.0,148.0,74,Rio de Janeiro,RJ,-22.9129,-43.2003,81.343,66.35
+rio-de-janeiro-rj-br-to-paraty-rj-br,2026-09-26,246.0,257.0,470.0,32,Rio de Janeiro,RJ,-22.9129,-43.2003,255.434,244.682
+rio-de-janeiro-rj-br-to-pirai-rj-br,2026-09-26,86.0,120.0,196.0,13,Rio de Janeiro,RJ,-22.9129,-43.2003,94.955,78.168
+rio-de-janeiro-rj-br-to-queimados-rj-br,2026-09-26,46.0,62.0,88.0,3374,Rio de Janeiro,RJ,-22.9129,-43.2003,50.372,44.972
+rio-de-janeiro-rj-br-to-rio-bonito-rj-br,2026-09-26,86.0,99.0,161.0,52,Rio de Janeiro,RJ,-22.9129,-43.2003,77.49,65.327
+rio-de-janeiro-rj-br-to-rio-das-ostras-rj-br,2026-09-26,180.0,190.0,344.0,18,Rio de Janeiro,RJ,-22.9129,-43.2003,166.476,144.078
+rio-de-janeiro-rj-br-to-sao-goncalo-rj-br,2026-09-26,36.0,52.0,83.0,19923,Rio de Janeiro,RJ,-22.9129,-43.2003,26.951,28.323
+rio-de-janeiro-rj-br-to-sao-joao-de-meriti-rj-br,2026-09-26,14.0,26.0,35.0,59908,Rio de Janeiro,RJ,-22.9129,-43.2003,27.97,25.513
+rio-de-janeiro-rj-br-to-sao-pedro-da-aldeia-rj-br,2026-09-26,163.0,183.0,349.0,1,Rio de Janeiro,RJ,-22.9129,-43.2003,141.026,124.368
+rio-de-janeiro-rj-br-to-seropedica-rj-br,2026-09-26,30.0,49.0,56.0,7317,Rio de Janeiro,RJ,-22.9129,-43.2003,73.678,60.67
+rio-de-janeiro-rj-br-to-tres-rios-rj-br,2026-09-26,131.0,142.0,264.0,4,Rio de Janeiro,RJ,-22.9129,-43.2003,128.426,112.615
+rio-de-janeiro-rj-br-to-vassouras-rj-br,2026-09-26,115.0,150.0,223.0,2,Rio de Janeiro,RJ,-22.9129,-43.2003,116.96,99.512
+rio-de-janeiro-rj-br-to-volta-redonda-rj-br,2026-09-26,120.0,144.0,287.0,33,Rio de Janeiro,RJ,-22.9129,-43.2003,126.865,106.668
+rio-do-sul-sc-br-to-lontras-sc-br,2026-09-26,12.0,19.0,29.0,513,Rio do Sul,SC,-27.2156,-49.643,13.508,16.598
+rio-do-sul-sc-br-to-rio-do-oeste-sc-br,2026-09-26,20.0,27.0,43.0,67,Rio do Sul,SC,-27.2156,-49.643,19.886,23.427
+rio-largo-al-br-to-murici-al-br,2026-09-26,35.0,38.0,133.0,2,Rio Largo,AL,-9.47783,-35.8394,34.107,31.185
+rio-largo-al-br-to-pilar-al-br,2026-09-26,27.0,36.0,50.0,55,Rio Largo,AL,-9.47783,-35.8394,25.807,24.577
+sabara-mg-br-to-contagem-mg-br,2026-09-26,28.0,46.0,60.0,1340,Sabará,MG,-19.884,-43.8263,35.287,44.283
+sabara-mg-br-to-sarzedo-mg-br,2026-09-26,49.0,76.0,109.0,9,Sabará,MG,-19.884,-43.8263,51.527,60.318
+salvador-ba-br-to-catu-ba-br,2026-09-26,84.0,96.0,232.0,7,Salvador,BA,-12.9718,-38.5011,86.995,84.753
+santa-luzia-mg-br-to-juatuba-mg-br,2026-09-26,67.0,87.0,127.0,10,Santa Luzia,MG,-19.7548,-43.8497,73.264,78.87
+santa-luzia-mg-br-to-taquaracu-de-minas-mg-br,2026-09-26,25.0,39.0,50.0,72,Santa Luzia,MG,-19.7548,-43.8497,29.249,39.343
+santana-de-parnaiba-sp-br-to-aruja-sp-br,2026-09-26,73.0,92.0,201.0,3,Santana de Parnaíba,SP,-23.4439,-46.9178,76.761,66.767
+santana-de-parnaiba-sp-br-to-embu-guacu-sp-br,2026-09-26,59.0,92.0,141.0,1,Santana de Parnaíba,SP,-23.4439,-46.9178,61.081,66.153
+santana-de-parnaiba-sp-br-to-francisco-morato-sp-br,2026-09-26,35.0,57.0,86.0,59,Santana de Parnaíba,SP,-23.4439,-46.9178,37.923,44.247
+santana-de-parnaiba-sp-br-to-itapevi-sp-br,2026-09-26,19.0,34.0,50.0,1518,Santana de Parnaíba,SP,-23.4439,-46.9178,21.797,25.08
+santana-de-parnaiba-sp-br-to-jundiai-sp-br,2026-09-26,36.0,46.0,87.0,208,Santana de Parnaíba,SP,-23.4439,-46.9178,41.246,40.885
+santana-de-parnaiba-sp-br-to-varzea-paulista-sp-br,2026-09-26,36.0,54.0,101.0,17,Santana de Parnaíba,SP,-23.4439,-46.9178,40.471,46.64
+santo-andre-sp-br-to-caieiras-sp-br,2026-09-26,65.0,92.0,196.0,7,Santo André,SP,-23.6737,-46.5432,56.252,63.895
+santo-andre-sp-br-to-itaquaquecetuba-sp-br,2026-09-26,51.0,68.0,132.0,113,Santo André,SP,-23.6737,-46.5432,38.164,53.297
+santo-andre-sp-br-to-jandira-sp-br,2026-09-26,70.0,98.0,180.0,12,Santo André,SP,-23.6737,-46.5432,55.565,58.032
+santo-andre-sp-br-to-jundiai-sp-br,2026-09-26,92.0,108.0,266.0,20,Santo André,SP,-23.6737,-46.5432,76.37,71.523
+santo-andre-sp-br-to-maua-sp-br,2026-09-26,8.0,19.0,25.0,60948,Santo André,SP,-23.6737,-46.5432,10.66,14.423
+santo-andre-sp-br-to-sao-vicente-sp-br,2026-09-26,65.0,78.0,152.0,31,Santo André,SP,-23.6737,-46.5432,56.005,58.873
+santos-sp-br-to-sao-caetano-do-sul-sp-br,2026-09-26,64.0,81.0,214.0,8,Santos,SP,-23.9535,-46.335,61.759,62.422
+santos-sp-br-to-sao-vicente-sp-br,2026-09-26,8.0,22.0,21.0,80153,Santos,SP,-23.9535,-46.335,8.164,11.755
+sao-bernardo-do-campo-sp-br-to-aruja-sp-br,2026-09-26,68.0,64.0,178.0,26,São Bernardo do Campo,SP,-23.6914,-46.5646,69.097,54.863
+sao-bernardo-do-campo-sp-br-to-campinas-sp-br,2026-09-26,132.0,126.0,237.0,58,São Bernardo do Campo,SP,-23.6914,-46.5646,114.019,99.693
+sao-bernardo-do-campo-sp-br-to-cubatao-sp-br,2026-09-26,40.0,49.0,117.0,32,São Bernardo do Campo,SP,-23.6914,-46.5646,38.905,40.718
+sao-bernardo-do-campo-sp-br-to-embu-das-artes-sp-br,2026-09-26,54.0,68.0,141.0,92,São Bernardo do Campo,SP,-23.6914,-46.5646,60.478,51.663
+sao-bernardo-do-campo-sp-br-to-osasco-sp-br,2026-09-26,48.0,70.0,136.0,452,São Bernardo do Campo,SP,-23.6914,-46.5646,40.59,47.867
+sao-bernardo-do-campo-sp-br-to-taboao-da-serra-sp-br,2026-09-26,46.0,66.0,126.0,180,São Bernardo do Campo,SP,-23.6914,-46.5646,33.676,43.718
+sao-caetano-do-sul-sp-br-to-santos-sp-br,2026-09-26,67.0,84.0,172.0,12,São Caetano do Sul,SP,-23.6229,-46.5548,61.86,66.698
+sao-caetano-do-sul-sp-br-to-taboao-da-serra-sp-br,2026-09-26,36.0,75.0,123.0,49,São Caetano do Sul,SP,-23.6229,-46.5548,26.28,41.422
+sao-goncalo-rj-br-to-belford-roxo-rj-br,2026-09-26,56.0,74.0,96.0,147,São Gonçalo,RJ,-22.8268,-43.0634,49.209,44.747
+sao-goncalo-rj-br-to-cabo-frio-rj-br,2026-09-26,136.0,141.0,280.0,2,São Gonçalo,RJ,-22.8268,-43.0634,128.892,119.892
+sao-goncalo-rj-br-to-itaborai-rj-br,2026-09-26,16.0,24.0,32.0,19707,São Gonçalo,RJ,-22.8268,-43.0634,25.521,24.415
+sao-goncalo-rj-br-to-itaguai-rj-br,2026-09-26,94.0,110.0,166.0,20,São Gonçalo,RJ,-22.8268,-43.0634,89.811,79.307
+sao-goncalo-rj-br-to-niteroi-rj-br,2026-09-26,14.0,28.0,30.0,114542,São Gonçalo,RJ,-22.8268,-43.0634,9.959,13.398
+sao-goncalo-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,35.0,51.0,65.0,23244,São Gonçalo,RJ,-22.8268,-43.0634,26.198,27.038
+sao-goncalo-rj-br-to-sao-joao-de-meriti-rj-br,2026-09-26,48.0,62.0,83.0,240,São Gonçalo,RJ,-22.8268,-43.0634,45.215,42.02
+sao-goncalo-rj-br-to-seropedica-rj-br,2026-09-26,89.0,105.0,153.0,17,São Gonçalo,RJ,-22.8268,-43.0634,90.922,77.177
+sao-joao-de-meriti-rj-br-to-duque-de-caxias-rj-br,2026-09-26,9.0,20.0,22.0,35096,São João de Meriti,RJ,-22.8058,-43.3729,10.245,11.408
+sao-joao-de-meriti-rj-br-to-guapimirim-rj-br,2026-09-26,65.0,74.0,128.0,19,São João de Meriti,RJ,-22.8058,-43.3729,67.009,54.002
+sao-joao-de-meriti-rj-br-to-japeri-rj-br,2026-09-26,36.0,49.0,65.0,194,São João de Meriti,RJ,-22.8058,-43.3729,50.546,42.92
+sao-joao-de-meriti-rj-br-to-mage-rj-br,2026-09-26,44.0,60.0,78.0,380,São João de Meriti,RJ,-22.8058,-43.3729,54.074,45.903
+sao-joao-de-meriti-rj-br-to-niteroi-rj-br,2026-09-26,41.0,68.0,84.0,468,São João de Meriti,RJ,-22.8058,-43.3729,36.529,34.918
+sao-joao-de-meriti-rj-br-to-petropolis-rj-br,2026-09-26,64.0,92.0,131.0,6,São João de Meriti,RJ,-22.8058,-43.3729,57.4,52.703
+sao-joaquim-de-bicas-mg-br-to-itatiaiucu-mg-br,2026-09-26,33.0,40.0,57.0,13,São Joaquim de Bicas,MG,-20.048,-44.2749,34.632,31.18
+sao-joaquim-de-bicas-mg-br-to-sabara-mg-br,2026-09-26,62.0,78.0,116.0,13,São Joaquim de Bicas,MG,-20.048,-44.2749,65.769,66.817
+sao-jose-da-lapa-mg-br-to-matozinhos-mg-br,2026-09-26,22.0,26.0,52.0,198,São José da Lapa,MG,-19.6971,-43.9586,23.748,18.115
+sao-jose-da-lapa-mg-br-to-santa-luzia-mg-br,2026-09-26,17.0,25.0,38.0,746,São José da Lapa,MG,-19.6971,-43.9586,28.552,27.018
+sao-jose-do-rio-preto-sp-br-to-nova-granada-sp-br,2026-09-26,35.0,36.0,80.0,55,São José do Rio Preto,SP,-20.8113,-49.3758,34.67,35.808
+sao-jose-do-rio-preto-sp-br-to-uchoa-sp-br,2026-09-26,35.0,33.0,68.0,121,São José do Rio Preto,SP,-20.8113,-49.3758,34.159,30.137
+sao-jose-dos-campos-sp-br-to-caraguatatuba-sp-br,2026-09-26,96.0,102.0,209.0,22,São José dos Campos,SP,-23.1896,-45.8841,90.599,106.103
+sao-jose-dos-campos-sp-br-to-mogi-das-cruzes-sp-br,2026-09-26,67.0,67.0,139.0,99,São José dos Campos,SP,-23.1896,-45.8841,67.176,58.348
+sao-jose-dos-pinhais-pr-br-to-contenda-pr-br,2026-09-26,51.0,60.0,91.0,10,São José dos Pinhais,PR,-25.5313,-49.2031,45.702,41.048
+sao-jose-dos-pinhais-pr-br-to-morretes-pr-br,2026-09-26,57.0,64.0,147.0,4,São José dos Pinhais,PR,-25.5313,-49.2031,61.334,51.14
+sao-jose-sc-br-to-imbituba-sc-br,2026-09-26,78.0,69.0,123.0,10,São José,SC,-27.6136,-48.6366,79.372,65.2
+sao-jose-sc-br-to-itajai-sc-br,2026-09-26,94.0,95.0,123.0,51,São José,SC,-27.6136,-48.6366,91.213,73.942
+sao-leopoldo-rs-br-to-alvorada-rs-br,2026-09-26,41.0,49.0,66.0,208,São Leopoldo,RS,-29.7545,-51.1498,36.69,39.028
+sao-leopoldo-rs-br-to-cachoeirinha-rs-br,2026-09-26,25.0,31.0,41.0,1161,São Leopoldo,RS,-29.7545,-51.1498,28.366,31.185
+sao-leopoldo-rs-br-to-caxias-do-sul-rs-br,2026-09-26,96.0,96.0,201.0,3,São Leopoldo,RS,-29.7545,-51.1498,91.653,86.715
+sao-leopoldo-rs-br-to-montenegro-rs-br,2026-09-26,41.0,45.0,78.0,124,São Leopoldo,RS,-29.7545,-51.1498,39.886,39.165
+sao-leopoldo-rs-br-to-picada-cafe-rs-br,2026-09-26,46.0,56.0,67.0,3,São Leopoldo,RS,-29.7545,-51.1498,42.181,49.52
+sao-leopoldo-rs-br-to-sapucaia-do-sul-rs-br,2026-09-26,8.0,15.0,18.0,25467,São Leopoldo,RS,-29.7545,-51.1498,9.54,13.228
+sao-lourenco-da-mata-pe-br-to-abreu-e-lima-pe-br,2026-09-26,32.0,52.0,51.0,95,São Lourenço da Mata,PE,-8.00684,-35.0124,25.387,31.94
+sao-lourenco-da-mata-pe-br-to-ipojuca-pe-br,2026-09-26,75.0,89.0,141.0,16,São Lourenço da Mata,PE,-8.00684,-35.0124,59.787,56.03
+sao-luis-ma-br-to-bacabeira-ma-br,2026-09-26,49.0,58.0,93.0,5,São Luís,MA,-2.53874,-44.2825,60.012,62.838
+sao-paulo-sp-br-to-aruja-sp-br,2026-09-26,36.0,51.0,104.0,2287,São Paulo,SP,-23.5329,-46.6395,41.213,34.77
+sao-paulo-sp-br-to-bertioga-sp-br,2026-09-26,96.0,130.0,199.0,262,São Paulo,SP,-23.5329,-46.6395,117.819,113.672
+sao-paulo-sp-br-to-carapicuiba-sp-br,2026-09-26,22.0,41.0,66.0,18521,São Paulo,SP,-23.5329,-46.6395,25.638,27.353
+sao-paulo-sp-br-to-diadema-sp-br,2026-09-26,8.0,22.0,29.0,102104,São Paulo,SP,-23.5329,-46.6395,22.94,33.542
+sao-paulo-sp-br-to-francisco-morato-sp-br,2026-09-26,41.0,64.0,117.0,867,São Paulo,SP,-23.5329,-46.6395,43.898,48.342
+sao-paulo-sp-br-to-guarulhos-sp-br,2026-09-26,19.0,33.0,57.0,268659,São Paulo,SP,-23.5329,-46.6395,19.473,21.522
+sao-paulo-sp-br-to-itu-sp-br,2026-09-26,96.0,101.0,247.0,128,São Paulo,SP,-23.5329,-46.6395,98.297,77.107
+sao-paulo-sp-br-to-jacarei-sp-br,2026-09-26,81.0,86.0,224.0,162,São Paulo,SP,-23.5329,-46.6395,80.901,64.308
+sao-paulo-sp-br-to-jaguariuna-sp-br,2026-09-26,131.0,124.0,259.0,17,São Paulo,SP,-23.5329,-46.6395,123.749,93.087
+sao-paulo-sp-br-to-osasco-sp-br,2026-09-26,12.0,25.0,38.0,172430,São Paulo,SP,-23.5329,-46.6395,20.518,23.803
+sao-paulo-sp-br-to-santana-de-parnaiba-sp-br,2026-09-26,30.0,50.0,98.0,7700,São Paulo,SP,-23.5329,-46.6395,37.891,39.23
+sao-paulo-sp-br-to-ubatuba-sp-br,2026-09-26,230.0,241.0,412.0,16,São Paulo,SP,-23.5329,-46.6395,224.367,215.1
+sao-pedro-da-aldeia-rj-br-to-araruama-rj-br,2026-09-26,27.0,41.0,55.0,557,São Pedro da Aldeia,RJ,-22.8429,-42.1026,31.663,35.333
+sao-pedro-da-aldeia-rj-br-to-armacao-dos-buzios-rj-br,2026-09-26,25.0,43.0,55.0,428,São Pedro da Aldeia,RJ,-22.8429,-42.1026,30.38,47.292
+sao-pedro-da-aldeia-rj-br-to-cabo-frio-rj-br,2026-09-26,9.0,20.0,25.0,14869,São Pedro da Aldeia,RJ,-22.8429,-42.1026,13.975,20.19
+sao-pedro-da-aldeia-rj-br-to-casimiro-de-abreu-rj-br,2026-09-26,38.0,55.0,79.0,15,São Pedro da Aldeia,RJ,-22.8429,-42.1026,87.282,87.447
+sao-pedro-da-aldeia-rj-br-to-iguaba-grande-rj-br,2026-09-26,12.0,19.0,27.0,1270,São Pedro da Aldeia,RJ,-22.8429,-42.1026,20.793,23.118
+sao-pedro-da-aldeia-rj-br-to-macae-rj-br,2026-09-26,72.0,109.0,150.0,12,São Pedro da Aldeia,RJ,-22.8429,-42.1026,69.75,90.438
+sao-pedro-da-aldeia-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,164.0,164.0,324.0,1,São Pedro da Aldeia,RJ,-22.8429,-42.1026,140.984,125.987
+sao-pedro-da-aldeia-rj-br-to-sao-goncalo-rj-br,2026-09-26,118.0,119.0,258.0,1,São Pedro da Aldeia,RJ,-22.8429,-42.1026,118.438,106.415
+sao-roque-sp-br-to-guarulhos-sp-br,2026-09-26,88.0,107.0,202.0,20,São Roque,SP,-23.5226,-47.1357,81.491,67.872
+sao-roque-sp-br-to-ibiuna-sp-br,2026-09-26,19.0,31.0,43.0,229,São Roque,SP,-23.5226,-47.1357,22.361,24.447
+sao-sebastiao-do-cai-rs-br-to-harmonia-rs-br,2026-09-26,9.0,16.0,29.0,13,São Sebastião do Caí,RS,-29.5885,-51.3749,8.662,11.488
+sao-sebastiao-do-cai-rs-br-to-novo-hamburgo-rs-br,2026-09-26,32.0,34.0,66.0,112,São Sebastião do Caí,RS,-29.5885,-51.3749,34.219,33.793
+sao-vicente-sp-br-to-cubatao-sp-br,2026-09-26,14.0,21.0,29.0,7380,São Vicente,SP,-23.9574,-46.3883,14.966,16.76
+sao-vicente-sp-br-to-mongagua-sp-br,2026-09-26,33.0,38.0,57.0,331,São Vicente,SP,-23.9574,-46.3883,35.654,42.35
+sapiranga-rs-br-to-dois-irmaos-rs-br,2026-09-26,12.0,20.0,26.0,762,Sapiranga,RS,-29.6349,-51.0064,12.903,17.837
+sapiranga-rs-br-to-parobe-rs-br,2026-09-26,19.0,21.0,33.0,1000,Sapiranga,RS,-29.6349,-51.0064,20.318,24.578
+sapucaia-do-sul-rs-br-to-gravatai-rs-br,2026-09-26,20.0,25.0,33.0,2563,Sapucaia do Sul,RS,-29.8276,-51.145,22.892,25.457
+sapucaia-do-sul-rs-br-to-sao-sebastiao-do-cai-rs-br,2026-09-26,38.0,42.0,72.0,18,Sapucaia do Sul,RS,-29.8276,-51.145,41.473,43.125
+saquarema-rj-br-to-araruama-rj-br,2026-09-26,14.0,24.0,32.0,2602,Saquarema,RJ,-22.9292,-42.5099,24.27,41.26
+saquarema-rj-br-to-arraial-do-cabo-rj-br,2026-09-26,43.0,63.0,85.0,36,Saquarema,RJ,-22.9292,-42.5099,64.436,92.128
+saquarema-rj-br-to-cabo-frio-rj-br,2026-09-26,62.0,83.0,131.0,73,Saquarema,RJ,-22.9292,-42.5099,74.9,86.985
+saquarema-rj-br-to-duque-de-caxias-rj-br,2026-09-26,113.0,136.0,259.0,13,Saquarema,RJ,-22.9292,-42.5099,132.767,130.147
+saquarema-rj-br-to-sao-joao-de-meriti-rj-br,2026-09-26,112.0,139.0,224.0,5,Saquarema,RJ,-22.9292,-42.5099,138.72,135.077
+sarzedo-mg-br-to-lagoa-santa-mg-br,2026-09-26,70.0,100.0,140.0,4,Sarzedo,MG,-20.0367,-44.1446,67.918,67.93
+sarzedo-mg-br-to-mario-campos-mg-br,2026-09-26,6.0,14.0,19.0,3145,Sarzedo,MG,-20.0367,-44.1446,7.973,10.518
+seropedica-rj-br-to-belford-roxo-rj-br,2026-09-26,44.0,55.0,67.0,117,Seropédica,RJ,-22.7526,-43.7155,40.365,34.343
+seropedica-rj-br-to-duque-de-caxias-rj-br,2026-09-26,59.0,60.0,96.0,139,Seropédica,RJ,-22.7526,-43.7155,53.044,45.605
+seropedica-rj-br-to-mage-rj-br,2026-09-26,75.0,73.0,118.0,11,Seropédica,RJ,-22.7526,-43.7155,82.778,65.138
+seropedica-rj-br-to-mangaratiba-rj-br,2026-09-26,36.0,44.0,68.0,88,Seropédica,RJ,-22.7526,-43.7155,47.044,42.672
+seropedica-rj-br-to-marica-rj-br,2026-09-26,112.0,144.0,191.0,6,Seropédica,RJ,-22.7526,-43.7155,119.791,121.432
+seropedica-rj-br-to-nilopolis-rj-br,2026-09-26,41.0,56.0,70.0,81,Seropédica,RJ,-22.7526,-43.7155,42.562,36.092
+seropedica-rj-br-to-niteroi-rj-br,2026-09-26,80.0,103.0,145.0,28,Seropédica,RJ,-22.7526,-43.7155,78.952,67.897
+seropedica-rj-br-to-paracambi-rj-br,2026-09-26,20.0,32.0,54.0,147,Seropédica,RJ,-22.7526,-43.7155,21.66,23.865
+seropedica-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,30.0,49.0,52.0,7702,Seropédica,RJ,-22.7526,-43.7155,69.034,57.525
+seropedica-rj-br-to-sao-joao-de-meriti-rj-br,2026-09-26,44.0,53.0,69.0,115,Seropédica,RJ,-22.7526,-43.7155,44.181,37.407
+seropedica-rj-br-to-volta-redonda-rj-br,2026-09-26,67.0,84.0,109.0,4,Seropédica,RJ,-22.7526,-43.7155,67.182,64.183
+sete-lagoas-mg-br-to-paraopeba-mg-br,2026-09-26,35.0,38.0,70.0,31,Sete Lagoas,MG,-19.4569,-44.2413,34.755,28.177
+sete-lagoas-mg-br-to-pedro-leopoldo-mg-br,2026-09-26,36.0,56.0,78.0,151,Sete Lagoas,MG,-19.4569,-44.2413,36.611,29.893
+sorocaba-sp-br-to-aracariguama-sp-br,2026-09-26,51.0,46.0,128.0,154,Sorocaba,SP,-23.4969,-47.4451,46.76,36.658
+sorocaba-sp-br-to-barueri-sp-br,2026-09-26,73.0,69.0,167.0,90,Sorocaba,SP,-23.4969,-47.4451,69.593,52.062
+sorocaba-sp-br-to-embu-das-artes-sp-br,2026-09-26,91.0,97.0,211.0,7,Sorocaba,SP,-23.4969,-47.4451,87.021,73.052
+sorocaba-sp-br-to-guarulhos-sp-br,2026-09-26,121.0,123.0,263.0,118,Sorocaba,SP,-23.4969,-47.4451,111.835,86.738
+sorocaba-sp-br-to-tatui-sp-br,2026-09-26,60.0,62.0,120.0,67,Sorocaba,SP,-23.4969,-47.4451,64.397,57.157
+sorocaba-sp-br-to-vargem-grande-paulista-sp-br,2026-09-26,60.0,63.0,161.0,18,Sorocaba,SP,-23.4969,-47.4451,54.498,54.27
+sumare-sp-br-to-hortolandia-sp-br,2026-09-26,8.0,17.0,21.0,21637,Sumaré,SP,-22.8204,-47.2728,9.075,10.703
+suzano-sp-br-to-caieiras-sp-br,2026-09-26,81.0,101.0,188.0,4,Suzano,SP,-23.5448,-46.3112,80.371,71.662
+suzano-sp-br-to-guarulhos-sp-br,2026-09-26,30.0,45.0,78.0,1662,Suzano,SP,-23.5448,-46.3112,37.217,35.6
+taboao-da-serra-sp-br-to-campinas-sp-br,2026-09-26,107.0,93.0,218.0,31,Taboão da Serra,SP,-23.6019,-46.7526,98.092,82.347
+taboao-da-serra-sp-br-to-embu-guacu-sp-br,2026-09-26,35.0,62.0,84.0,106,Taboão da Serra,SP,-23.6019,-46.7526,37.404,43.998
+taboao-da-serra-sp-br-to-maua-sp-br,2026-09-26,67.0,81.0,155.0,28,Taboão da Serra,SP,-23.6019,-46.7526,39.755,55.177
+taboao-da-serra-sp-br-to-ribeirao-pires-sp-br,2026-09-26,75.0,84.0,177.0,2,Taboão da Serra,SP,-23.6019,-46.7526,48.066,62.568
+taboao-da-serra-sp-br-to-santana-de-parnaiba-sp-br,2026-09-26,36.0,52.0,94.0,87,Taboão da Serra,SP,-23.6019,-46.7526,34.058,39.73
+taboao-da-serra-sp-br-to-sao-paulo-sp-br,2026-09-26,8.0,23.0,27.0,112635,Taboão da Serra,SP,-23.6019,-46.7526,15.536,26.537
+taquara-rs-br-to-ararica-rs-br,2026-09-26,19.0,21.0,34.0,95,Taquara,RS,-29.6505,-50.7753,19.57,22.092
+taquara-rs-br-to-canoas-rs-br,2026-09-26,64.0,66.0,113.0,15,Taquara,RS,-29.6505,-50.7753,64.238,67.175
+taubate-sp-br-to-cacapava-sp-br,2026-09-26,19.0,23.0,35.0,3291,Taubaté,SP,-23.0104,-45.5593,22.385,19.778
+taubate-sp-br-to-pindamonhangaba-sp-br,2026-09-26,19.0,27.0,34.0,7187,Taubaté,SP,-23.0104,-45.5593,16.982,20.377
+teresopolis-rj-br-to-guapimirim-rj-br,2026-09-26,22.0,38.0,43.0,153,Teresópolis,RJ,-22.4165,-42.9752,20.798,28.598
+teresopolis-rj-br-to-mage-rj-br,2026-09-26,46.0,64.0,119.0,25,Teresópolis,RJ,-22.4165,-42.9752,38.369,46.455
+timbo-sc-br-to-gaspar-sc-br,2026-09-26,43.0,63.0,72.0,56,Timbó,SC,-26.8246,-49.269,45.923,47.37
+timbo-sc-br-to-pomerode-sc-br,2026-09-26,22.0,27.0,39.0,257,Timbó,SC,-26.8246,-49.269,18.541,24.72
+tramandai-rs-br-to-balneario-pinhal-rs-br,2026-09-26,32.0,41.0,51.0,200,Tramandaí,RS,-29.9841,-50.1322,31.488,33.275
+tramandai-rs-br-to-maquine-rs-br,2026-09-26,49.0,51.0,83.0,6,Tramandaí,RS,-29.9841,-50.1322,49.923,49.087
+trindade-go-br-to-aparecida-de-goiania-go-br,2026-09-26,32.0,48.0,53.0,1279,Trindade,GO,-16.6517,-49.4927,45.563,41.913
+trindade-go-br-to-inhumas-go-br,2026-09-26,40.0,44.0,69.0,18,Trindade,GO,-16.6517,-49.4927,43.281,45.172
+tubarao-sc-br-to-braco-do-norte-sc-br,2026-09-26,35.0,43.0,67.0,171,Tubarão,SC,-28.4713,-49.0144,35.447,39.362
+tubarao-sc-br-to-treze-de-maio-sc-br,2026-09-26,22.0,29.0,48.0,52,Tubarão,SC,-28.4713,-49.0144,29.027,30.725
+valinhos-sp-br-to-guarulhos-sp-br,2026-09-26,108.0,104.0,201.0,31,Valinhos,SP,-22.9698,-46.9974,99.374,80.005
+valinhos-sp-br-to-itatiba-sp-br,2026-09-26,20.0,30.0,46.0,91,Valinhos,SP,-22.9698,-46.9974,20.48,20.218
+vargem-grande-paulista-sp-br-to-ibiuna-sp-br,2026-09-26,20.0,29.0,51.0,183,Vargem Grande Paulista,SP,-23.5993,-47.022,28.068,29.457
+vargem-grande-paulista-sp-br-to-santo-andre-sp-br,2026-09-26,78.0,100.0,162.0,7,Vargem Grande Paulista,SP,-23.5993,-47.022,64.15,71.363
+varzea-paulista-sp-br-to-franco-da-rocha-sp-br,2026-09-26,22.0,35.0,46.0,113,Várzea Paulista,SP,-23.2136,-46.8234,24.537,28.913
+varzea-paulista-sp-br-to-santana-de-parnaiba-sp-br,2026-09-26,36.0,52.0,93.0,13,Várzea Paulista,SP,-23.2136,-46.8234,41.555,42.965
+vespasiano-mg-br-to-contagem-mg-br,2026-09-26,30.0,51.0,61.0,1578,Vespasiano,MG,-19.6883,-43.9239,41.291,41.13
+vespasiano-mg-br-to-raposos-mg-br,2026-09-26,59.0,93.0,88.0,4,Vespasiano,MG,-19.6883,-43.9239,49.911,66.347
+viamao-rs-br-to-estancia-velha-rs-br,2026-09-26,62.0,69.0,107.0,10,Viamão,RS,-30.0819,-51.0194,62.335,64.81
+viamao-rs-br-to-guaiba-rs-br,2026-09-26,51.0,61.0,88.0,72,Viamão,RS,-30.0819,-51.0194,63.332,58.693
+vinhedo-sp-br-to-barueri-sp-br,2026-09-26,70.0,71.0,121.0,19,Vinhedo,SP,-23.0302,-46.9833,72.539,56.593
+vinhedo-sp-br-to-monte-mor-sp-br,2026-09-26,46.0,45.0,114.0,25,Vinhedo,SP,-23.0302,-46.9833,48.602,45.862
+vitoria-de-santo-antao-pe-br-to-caruaru-pe-br,2026-09-26,86.0,80.0,155.0,8,Vitória de Santo Antão,PE,-8.12819,-35.2976,84.025,64.445
+vitoria-de-santo-antao-pe-br-to-ilha-de-itamaraca-pe-br,2026-09-26,89.0,120.0,196.0,1,Vitória de Santo Antão,PE,-8.12819,-35.2976,91.261,82.025
+volta-redonda-rj-br-to-itatiaia-rj-br,2026-09-26,60.0,60.0,118.0,12,Volta Redonda,RJ,-22.5202,-44.0996,61.864,52.197
+volta-redonda-rj-br-to-nova-iguacu-rj-br,2026-09-26,91.0,101.0,202.0,7,Volta Redonda,RJ,-22.5202,-44.0996,91.588,85.937
+volta-redonda-rj-br-to-pinheiral-rj-br,2026-09-26,12.0,24.0,30.0,3782,Volta Redonda,RJ,-22.5202,-44.0996,14.569,22.638
+volta-redonda-rj-br-to-pirai-rj-br,2026-09-26,25.0,31.0,55.0,121,Volta Redonda,RJ,-22.5202,-44.0996,34.633,34.523
+volta-redonda-rj-br-to-porto-real-rj-br,2026-09-26,38.0,43.0,78.0,38,Volta Redonda,RJ,-22.5202,-44.0996,38.768,37.982
+volta-redonda-rj-br-to-quatis-rj-br,2026-09-26,40.0,49.0,80.0,10,Volta Redonda,RJ,-22.5202,-44.0996,41.635,43.285
+volta-redonda-rj-br-to-rio-de-janeiro-rj-br,2026-09-26,121.0,139.0,257.0,27,Volta Redonda,RJ,-22.5202,-44.0996,127.888,114.922
+votorantim-sp-br-to-sao-paulo-sp-br,2026-09-26,105.0,112.0,241.0,41,Votorantim,SP,-23.5446,-47.4388,102.659,81.633
+votorantim-sp-br-to-tatui-sp-br,2026-09-26,64.0,65.0,154.0,4,Votorantim,SP,-23.5446,-47.4388,62.62,58.277

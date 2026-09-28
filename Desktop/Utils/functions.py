@@ -51,3 +51,7 @@ def getSpan(low, high):
 def getDelay(minutes):
     total = int(round(float(minutes)))
     return ('-' if total < 0 else '+') + getDuration(abs(total))
+
+# CHANCE DE CHUVA EM PORCENTAGEM; HORA SEM CHANCE PUBLICADA APARECE COMO TRACO, COMO NO CELULAR
+def getChance(value):
+    return f'{value:.0f}%' if np.isfinite(value) else '—'

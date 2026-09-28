@@ -3,13 +3,14 @@ import pandas as pd
 from time import time
 from Api.index import api
 from Database.index import database
-from Model.index import model
-from Oracle.index import getPrice, getState, getSurge, update
-from Utils.functions import getClock, getDistance
+from Model.index import get, getBands
+import Oracle.index as oracle
+from Oracle.index import getAnchor, getCalibration, getState, getSurge
+from Utils.functions import getDistance
 from Utils.variables import STEP, HORIZON
 
 
-# NUCLEO DA CONSULTA: ROTA, CLIMA, PRECO OBSERVADO AGORA E SERIE DE 12 H ANCORADA NAS OBSERVACOES DE HOJE; USADO PELA JANELA E PELO WORKER
+# NUCLEO DA CONSULTA: ROTA, CLIMA, PRECO E TEMPO ESPERADOS AGORA E SERIE DE 12 H CALIBRADA PELOS PRECOS INFORMADOS; USADO PELA JANELA E PELO WORKER
 class Engine:
     WEATHER_TTL  = 600    # s de validade da previsao do tempo em cache
     MIN_DISTANCE = 0.3    # km abaixo do qual origem e destino sao o mesmo ponto
@@ -17,11 +18,15 @@ class Engine:
     def __init__(self):
         self.weather = {}
 
-    # TARIFA DE CADA APLICATIVO A PARTIR DOS PRECOS REAIS JA INFORMADOS; SEM NENHUM, VALE A TABELA PUBLICADA
+    # TABELA AJUSTADA AS MEDIAS REAIS E PRECOS JA INFORMADOS PELO USUARIO
     def setup(self):
-        update(database.get('SELECT company, distance, minutes, surge, observed FROM Fares ORDER BY ts'))
+        oracle.load()
+        self.update()
 
-    # ROTA COM CACHE NO BANCO E FUSO DA ORIGEM; MARCA O USO PORQUE O WORKER OBSERVA AS ROTAS MAIS RECENTES
+    def update(self):
+        oracle.update(database.get('SELECT company, ts, route_id, lat, lon, city, uf, level, expected, observed FROM Fares ORDER BY ts, id'))
+
+    # ROTA COM CACHE NO BANCO, FUSO E MUNICIPIO DA ORIGEM; MARCA O USO PORQUE O WORKER OBSERVA AS ROTAS MAIS RECENTES
     def getRoute(self, src, dst):
         key   = (round(src['lat'], 5), round(src['lon'], 5), round(dst['lat'], 5), round(dst['lon'], 5))
         where = 'WHERE o_lat = ? AND o_lon = ? AND d_lat = ? AND d_lon = ?'
@@ -33,12 +38,19 @@ class Engine:
             if zone is None or res['distance'] < self.MIN_DISTANCE:
                 return None
 
-            database.set('INSERT OR IGNORE INTO Routes (origin, destination, o_lat, o_lon, d_lat, d_lon, distance, duration, corridor, tz, used_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)', [(src['label'], dst['label'], *key, res['distance'], res['duration'], res['corridor'], zone)])
+            database.set('INSERT OR IGNORE INTO Routes (origin, destination, o_lat, o_lon, d_lat, d_lon, distance, duration, tz, used_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)', [(src['label'], dst['label'], *key, res['distance'], res['duration'], zone)])
 
         database.set(f'UPDATE Routes SET used_at = ? {where}', [(int(time()), *key)])
-        return database.get(f'SELECT * FROM Routes {where}', key).iloc[0].to_dict()
+        route = database.get(f'SELECT * FROM Routes {where}', key).iloc[0].to_dict()
+        place = None if route['city'] else api.getCity(route['o_lat'], route['o_lon'])    # sem o municipio vale a vizinhanca; a proxima consulta tenta de novo
 
-    # LUGARES QUE O USUARIO JA CONFIRMOU, DOS MAIS RECENTES; AS ROTAS DO BOOTSTRAP TEM USED_AT 0 E FICAM DE FORA, PORQUE NINGUEM AS ESCOLHEU
+        if place is not None:
+            database.set('UPDATE Routes SET city = ?, uf = ? WHERE id = ?', [(place['city'], place['uf'], route['id'])])
+            route.update(place)
+
+        return route
+
+    # LUGARES QUE O USUARIO JA CONFIRMOU, DOS MAIS RECENTES
     def getPlaces(self, limit=5):
         df = database.get('SELECT label, lat, lon FROM (SELECT origin AS label, o_lat AS lat, o_lon AS lon, used_at FROM Routes UNION ALL SELECT destination, d_lat, d_lon, used_at FROM Routes) WHERE used_at > 0 ORDER BY used_at DESC')
         return df.drop_duplicates('label').head(limit).to_dict('records')
@@ -58,53 +70,50 @@ class Engine:
         self.weather[key] = hit
         return hit[1]
 
-    def get(self, route, company='uber', now=None):
-        now     = int(time() if now is None else now)
+    # CHUVA E CHANCE NA GRADE DA SERIE: A LINHA 0 E O INSTANTE EXATO, AS DEMAIS SAO OS SLOTS DE 10 MIN ATE 12 H
+    def getGrid(self, route, now):
         ts      = np.append(now, np.arange((now // STEP + 1) * STEP, now + HORIZON + 1, STEP))
         weather = self.getWeather(route['o_lat'], route['o_lon'])
 
         # previsao em cache que ja nao cobre o horizonte viraria chuva constante no fim da serie
-        if weather is None or weather['ts'].max() < ts[-1] or not model.ready():
+        if weather is None or weather['ts'].max() < ts[-1]:
             return None
 
-        rain  = np.interp(ts, weather['ts'], weather['rain'])
-        excess, noise, minutes = [float(value[0]) for value in getState(route, ts[:1], rain[:1])]
-        price = float(getPrice(route['distance'], minutes, excess, noise, company))
-        today = self.getToday(route, company, now)
-        obs   = pd.concat([today, pd.DataFrame({'ts': [now], 'rain': [rain[0]], 'price': [price], 'minutes': [minutes]})], ignore_index=True).astype({'ts': 'int64', 'rain': 'float64', 'price': 'float64', 'minutes': 'float64'})
-        grid  = pd.DataFrame({'ts': ts, 'rain': rain})
-        blank = [np.nan] * (len(ts) - 1)
-        return pd.concat([grid, model.get(route, grid, obs, company)], axis=1).assign(probability=np.interp(ts, weather['ts'], weather['probability']), price=[price] + blank, minutes=[minutes] + blank, excess=[excess] + blank, noise=[noise] + blank)
+        return pd.DataFrame({'ts': ts, 'rain': np.interp(ts, weather['ts'], weather['rain']), 'probability': np.interp(ts, weather['ts'], weather['probability'])})
 
-    # OBSERVACOES DE HOJE DA ROTA: O BANCO GUARDA O ESTADO DO MERCADO E O PRECO SAI DA TARIFA DO APLICATIVO ESCOLHIDO
-    def getToday(self, route, company, now):
-        midnight = pd.Timestamp(getClock([now], route['tz'])[2][0]).tz_localize(route['tz'], nonexistent='shift_forward').timestamp()
-        today    = database.get('SELECT ts, rain, excess, noise, minutes FROM Prices WHERE route_id = ? AND ts >= ? AND ts < ? ORDER BY ts', (route['id'], int(midnight), now // STEP * STEP))
-        return pd.DataFrame({'ts': today['ts'], 'rain': today['rain'], 'price': getPrice(route['distance'], today['minutes'], today['excess'], today['noise'], company), 'minutes': today['minutes']})
+    def get(self, route, company='uber', now=None):
+        now  = int(time() if now is None else now)
+        grid = self.getGrid(route, now)
 
-    # PRECO REAL LIDO NO APLICATIVO: GUARDA A OBSERVACAO COM O ESTADO DO MERCADO DAQUELE INSTANTE E REAJUSTA A TARIFA; ZERO APAGA A CALIBRACAO DO APLICATIVO
+        if grid is None:
+            return None
+
+        bands  = get(route, grid['ts'], grid['rain'], grid['probability'], company, getCalibration(route, company, now))
+        excess = getState(route, grid['ts'][:1], grid['rain'][:1])[0]
+        blank  = [np.nan] * (len(grid) - 1)
+        return pd.concat([grid, bands], axis=1).assign(price=[bands['p50'][0]] + blank, minutes=[bands['m50'][0]] + blank, surge=[float(getSurge(excess, company)[0])] + blank)
+
+    # PRECO REAL LIDO NO APLICATIVO: GUARDA COM O PRECO CENTRAL QUE O APP MOSTRARIA SEM CALIBRACAO NAQUELE INSTANTE E RECALIBRA; ZERO APAGA OS PRECOS DO APLICATIVO
     def setFare(self, route, company, observed, now=None):
         now = int(time() if now is None else now)
 
         if observed <= 0:
             database.set('DELETE FROM Fares WHERE company = ?', [(company,)])
         else:
-            df = self.get(route, company, now)
+            grid = self.getGrid(route, now)
 
-            if df is None:
+            if grid is None:
                 return None
 
-            row = df.iloc[0]
-            database.set('INSERT INTO Fares (company, ts, distance, minutes, surge, observed) VALUES (?, ?, ?, ?, ?, ?)', [(company, now, route['distance'], float(row['minutes']), float(getSurge(row['excess'], row['noise'], company)), float(observed))])
+            anchor   = getAnchor(route, now)
+            expected = float(getBands(route, grid['ts'][:1], grid['rain'][:1], grid['probability'][:1], company, anchor)['p50'][0])
+            database.set('INSERT INTO Fares (company, ts, route_id, lat, lon, city, uf, level, expected, observed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [(company, now, int(route['id']), route['o_lat'], route['o_lon'], route['city'], route['uf'], anchor['market']['level'], expected, float(observed))])
 
-        self.setup()
-        return database.get('SELECT COUNT(*) AS n FROM Fares WHERE company = ?', (company,))['n'][0]
+        self.update()
+        return int(database.get('SELECT COUNT(*) AS n FROM Fares WHERE company = ?', (company,))['n'][0])
 
     # CONSULTA COMPLETA: VALIDA OS ENDERECOS, TRACA A ROTA E PREVE; QUANDO UMA ETAPA FALHA DEVOLVE O MOTIVO PARA A TELA
     def getQuote(self, src, dst, company='uber', now=None):
-        if not model.ready():
-            return {'error': 'Modelo em preparação: a previsão aparece assim que o primeiro treino terminar.'}
-
         src = src if 'lat' in src else api.geocode(src['label'])
 
         if src is None:

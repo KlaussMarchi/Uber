@@ -1,161 +1,101 @@
 package com.klauss.tarifa
 
-import java.util.stream.IntStream
-import org.json.JSONArray
-import org.json.JSONObject
-import kotlin.math.ceil
+import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 
 
-// OBSERVACOES DE HOJE DE UMA ROTA (A ULTIMA E A DE AGORA), COM PRECO E TEMPO POR NOME DE COLUNA COMO NO DESKTOP
-class Obs(val ts: LongArray, val rain: DoubleArray, val values: Map<String, DoubleArray>)
-
-// ESTADO DA CALIBRACAO DE UM ALVO: ENCOLHIMENTO DO NIVEL DO DIA, CORTE DO CHOQUE, ANCORA POR HORIZONTE E OFFSETS POR HORIZONTE E REGIME
-class Calibration(val lam: Double, val clip: Double, val beta: Array<DoubleArray>, val offsets: Array<Array<DoubleArray>>)
-
-// ARVORE DO LIGHTGBM EM VETORES PLANOS, LIDA DO MESMO TEXTO QUE O DESKTOP SALVA COM MODEL_TO_STRING
-class Tree(val feature: IntArray, val threshold: DoubleArray, val decision: IntArray, val left: IntArray, val right: IntArray, val leaf: DoubleArray, val boundaries: IntArray, val categories: IntArray) {
-    // FOLHA DE UMA LINHA PELAS REGRAS DO LIGHTGBM: NUMERICA COM TIPO DE FALTANTE E CATEGORICA POR BITSET
-    fun get(x: DoubleArray): Double {
-        if (feature.isEmpty()) return leaf[0]
-        var node = 0
-
-        while (node >= 0) {
-            val kind    = decision[node]
-            val missing = (kind shr 2) and 3
-            var value   = x[feature[node]]
-
-            node = if (kind and 1 != 0) {
-                if (value.isNaN() && missing == 2 || !value.isNaN() && value.toInt() < 0) right[node] else {
-                    val category = if (value.isNaN()) 0 else value.toInt()
-                    val start    = boundaries[threshold[node].toInt()]
-                    val words    = boundaries[threshold[node].toInt() + 1] - start
-                    if (category / 32 < words && (categories[start + category / 32] ushr (category % 32)) and 1 != 0) left[node] else right[node]
-                }
-            } else {
-                if (value.isNaN() && missing != 2) value = 0.0
-                val default = missing == 1 && value >= -1e-35 && value <= 1e-35 || missing == 2 && value.isNaN()
-                if (default) (if (kind and 2 != 0) left[node] else right[node]) else if (value <= threshold[node]) left[node] else right[node]
-            }
-        }
-
-        return leaf[node.inv()]
-    }
-}
-
-// QUANTIS DO PRECO E DO TEMPO DE VIAGEM TREINADOS NO DESKTOP, ANCORADOS NO QUE O MERCADO MOSTRA AGORA E NO NIVEL DO DIA
+// FAIXAS P10/P50/P90 DO PRECO E M10/M50/M90 DO TEMPO: MISTURA DO CENARIO SECO E DO CHUVOSO PELA CHANCE DE CHUVA, COM A INCERTEZA DO NIVEL DA REGIAO, DA DINAMICA E DO TRANSITO; A MESMA CONTA DO MODEL/INDEX.PY
 object Model {
-    val QUANTILES = listOf("10", "50", "90")
-    val TARGETS   = mapOf("price" to "p", "minutes" to "m")
-    val FEATURES  = listOf("hour", "weekday", "distance", "duration", "corridor", "rain", "company")
-    val RAIN_GRID = doubleArrayOf(0.0, 0.5, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0)    // mm/h, grade do rearranjo monotono
-    val REGIMES   = intArrayOf(1, 2, 6)                                         // observacoes de hoje que abrem cada regime: rota nova, rastreada ha menos de 1 h, rastreada
-    val DIGITS    = mapOf("p" to 2, "m" to 2)
-    val LEADS     = (HORIZON / STEP + 1).toInt()
-    const val MIN_BAND = 0.01                                                   // largura minima da faixa, fracao da mediana
+    val QUANTILES = linkedMapOf("10" to 0.10, "50" to 0.50, "90" to 0.90)
+    val DIGITS    = mapOf("p" to 2, "m" to 2)    // centavos e centesimo de minuto, para a faixa nao empatar em viagem curta
+    val ERFC      = doubleArrayOf(-1.26551223, 1.00002368, 0.37409196, 0.09678418, -0.18628806, 0.27886807, -1.13520398, 1.48851587, -0.82215223, 0.17087277)
 
-    var boosters: Map<String, List<List<Tree>>>? = null
-    var state     = emptyMap<String, Calibration>()
-    var version   = 0
-    var trainedAt = 0L
+    const val MIN_BAND     = 0.01    // largura minima da faixa, fracao da mediana
+    const val DYNAMIC_PEAK = 0.15    // desvio a mais por unidade de excesso de demanda (pico, chuva)
+    const val TIME_BASE    = 0.06    // desvio log do tempo de viagem de madrugada
+    const val TIME_PEAK    = 0.04    // desvio a mais por unidade de congestionamento relativo
+    const val TIME_RAIN    = 0.10    // desvio a mais com chuva forte
+    const val RAIN_SURE    = 0.1     // mm/h previstos a partir dos quais a chuva conta como provavel mesmo com chance baixa
+    const val RAIN_LIGHT   = 0.5     // mm/h minimos do cenario chuvoso
+    const val RAIN_HEAVY   = 30.0
+    const val SIGMA_MIN    = 1e-4
+    const val STEPS        = 60      // bissecoes do quantil; 2^-60 da faixa inicial ja e menor que um centavo
 
-    // LE O MODEL.JSON DO DESKTOP; ARQUIVO FORA DO FORMATO E ERRO DE EMPACOTAMENTO, ENTAO FALHA ALTO
-    fun setup(text: String) = synchronized(this) {
-        if (boosters != null) return@synchronized
+    // DISTRIBUICAO NORMAL ACUMULADA PELA ERFC DO NUMERICAL RECIPES (ERRO RELATIVO ABAIXO DE 1,2E-7)
+    fun getNormal(z: Double): Double {
+        val x    = -z / sqrt(2.0)
+        val t    = 1 / (1 + 0.5 * abs(x))
+        var poly = ERFC[9]
 
-        val data = JSONObject(text)
-        val fits = TARGETS.keys.associateWith { column ->
-            val item = data.getJSONObject("state").getJSONObject(column)
-            val beta = item.getJSONArray("beta").let { rows -> Array(rows.length()) { getDoubles(rows.getJSONArray(it)) } }
-            val offsets = item.getJSONArray("offsets").let { rows -> Array(rows.length()) { h -> rows.getJSONArray(h).let { regimes -> Array(regimes.length()) { getDoubles(regimes.getJSONArray(it)) } } } }
-            check(beta.size == LEADS && beta.all { it.size == 4 } && offsets.size == LEADS && offsets.all { row -> row.size == REGIMES.size && row.all { it.size == 2 } }) { "model.json com horizontes diferentes do app" }
-            Calibration(item.getDouble("lam"), item.getDouble("clip"), beta, offsets)
-        }
+        for (k in 8 downTo 0) poly = ERFC[k] + t * poly
 
-        val features = data.getJSONArray("features")
-        check(FEATURES == List(features.length()) { features.getString(it) }) { "model.json com outros atributos que os do app" }
-
-        state     = fits
-        version   = data.getInt("version")
-        trainedAt = data.getJSONObject("metrics").getLong("trained_at")
-        boosters  = TARGETS.keys.associateWith { column -> QUANTILES.map { getTrees(data.getJSONObject("boosters").getJSONObject(column).getString(it)) } }
+        val r = t * exp(-x * x + poly)
+        return 0.5 * (if (x >= 0) r else 2 - r)
     }
 
-    fun ready() = boosters != null
+    // QUANTIL DE UMA MISTURA DE DUAS NORMAIS (SECO E CHUVOSO) POR BISSECAO; SEM CHUVA POSSIVEL VIRA A NORMAL DO CENARIO SECO
+    fun getQuantile(q: Double, wet: Double, means: DoubleArray, sigmas: DoubleArray): Double {
+        var lo = min(means[0] - 8 * sigmas[0], means[1] - 8 * sigmas[1])
+        var hi = max(means[0] + 8 * sigmas[0], means[1] + 8 * sigmas[1])
 
-    // SERIE PREVISTA PARA OS INSTANTES PEDIDOS: QUANTIS DO MULTIPLICADOR, DESLOCADOS PELA ANCORA DE HOJE E ABERTOS PELOS OFFSETS CONFORMAIS
-    fun get(route: Route, ts: LongArray, rain: DoubleArray, obs: Obs, company: String): Map<String, DoubleArray>? {
-        val trees = boosters ?: return null
-        val both  = ts + obs.ts
-        val clock = getClock(both, route.tz)
-        val wet   = rain + obs.rain
-        val index = COMPANIES.keys.indexOf(company).toDouble()
-        val X     = Array(both.size) { doubleArrayOf(clock.hour[it], clock.weekday[it].toDouble(), route.distance, route.duration, route.corridor, wet[it], index) }
-        val n     = ts.size
-        val out   = LinkedHashMap<String, DoubleArray>()
+        repeat(STEPS) {
+            val mid = (lo + hi) / 2
+            if ((1 - wet) * getNormal((mid - means[0]) / sigmas[0]) + wet * getNormal((mid - means[1]) / sigmas[1]) < q) lo = mid else hi = mid
+        }
 
-        for ((column, prefix) in TARGETS) {
-            val fit    = state.getValue(column)
-            val scale  = if (column == "price") Oracle.getTariff(route.distance, route.duration, 1.0, company) else route.duration
-            val (lo, mid, hi) = getQuantiles(trees.getValue(column), X)
-            val r      = DoubleArray(obs.ts.size) { ln(obs.values.getValue(column)[it] / scale / mid[n + it]) }
-            val clip   = DoubleArray(r.size) { r[it].coerceIn(-fit.clip, fit.clip) }
-            val sum    = clip.sum()
-            val regime = REGIMES.count { it <= r.size } - 1
-            val bands  = Array(3) { DoubleArray(n) }
+        return (lo + hi) / 2
+    }
+
+    // CENARIOS DE CHUVA: A CHANCE DO OPEN-METEO E O PESO DO CHUVOSO, E A CHUVA DELE E A PREVISTA DIVIDIDA PELA CHANCE (A PREVISAO JA E A MEDIA)
+    fun getScenario(rain: Double, probability: Double): Pair<Double, Double> {
+        val chance = (if (probability.isNaN()) 0.0 else probability / 100).coerceIn(0.0, 1.0)
+        val wet    = if (rain > RAIN_SURE) max(chance, 0.5) else chance
+        return wet to (rain / max(wet, 1e-9)).coerceIn(RAIN_LIGHT, RAIN_HEAVY)
+    }
+
+    // FAIXAS NOS INSTANTES PEDIDOS, SEM ARREDONDAR; O PRECO INFORMADO MAIS RECENTE PUXA O COMECO DA SERIE E SE DISSIPA
+    fun getBands(route: Route, ts: LongArray, rain: DoubleArray, probability: DoubleArray, company: String, calibration: Calibration): Map<String, DoubleArray> {
+        val n         = ts.size
+        val scenarios = List(n) { getScenario(rain[it], probability[it]) }
+        val wet       = DoubleArray(n) { scenarios[it].first }
+        val heavy     = DoubleArray(n) { scenarios[it].second }
+        val error     = Oracle.MARKET!!.sigma.getDouble("pace")    // desvio log do ritmo medio da rota, que o preco informado nao corrige
+        val near      = DoubleArray(n) { if (ts[it] >= calibration.ts) calibration.weight * exp(-max(ts[it] - calibration.ts - Oracle.HOLD, 0L).toDouble() / Oracle.TAU) else 0.0 }
+        val means     = mapOf("p" to Array(2) { DoubleArray(n) }, "m" to Array(2) { DoubleArray(n) })
+        val sigmas    = mapOf("p" to Array(2) { DoubleArray(n) }, "m" to Array(2) { DoubleArray(n) })
+
+        for ((s, scenario) in listOf(DoubleArray(n), heavy).withIndex()) {
+            val state = Oracle.getState(route, ts, scenario)
 
             for (i in 0 until n) {
-                val lead   = ceil((ts[i] - obs.ts.last()).toDouble() / STEP).coerceIn(0.0, LEADS - 1.0).toInt()
-                val b      = fit.beta[lead]
-                val same   = if (clock.day[i] == clock.day.last()) 1.0 else 0.0
-                val shift  = exp(b[0] + b[1] * clip.last() + b[2] * (r.last() - clip.last()) + b[3] * sum / (r.size + fit.lam) * same)
-                val side   = fit.offsets[lead][regime]
-                val middle = mid[i] * shift
-                bands[0][i] = min(lo[i] * shift - side[0], middle * (1 - MIN_BAND / 2)) * scale
-                bands[1][i] = middle * scale
-                bands[2][i] = max(hi[i] * shift + side[1], middle * (1 + MIN_BAND / 2)) * scale
+                val drops   = 1 - exp(-scenario[i] / Oracle.RAIN_MM)
+                val dynamic = Oracle.DYNAMIC + DYNAMIC_PEAK * state.excess[i]
+                val travel  = TIME_BASE + TIME_PEAK * state.traffic[i] + TIME_RAIN * drops
+                val share   = Oracle.getShare(route.distance, state.minutes[i]) * travel
+                val spread  = (1 - near[i]) * (1 - near[i]) * calibration.variance + (1 - near[i] * near[i]) * (dynamic * dynamic + share * share)    // o preco informado ja traz a dinamica e o transito daquele instante
+                val tariff  = Oracle.getTariff(calibration.market.level, route.distance, state.minutes[i], state.excess[i], company)
+                means.getValue("p")[s][i]  = ln(tariff) + (calibration.mean + near[i] * (calibration.last - calibration.mean))
+                sigmas.getValue("p")[s][i] = sqrt(max(spread, SIGMA_MIN * SIGMA_MIN))
+                means.getValue("m")[s][i]  = ln(state.minutes[i])
+                sigmas.getValue("m")[s][i] = sqrt(error * error + travel * travel)
             }
+        }
 
-            QUANTILES.forEachIndexed { q, key -> out["$prefix$key"] = DoubleArray(n) { getRound(bands[q][it], DIGITS.getValue(prefix)) } }
+        val out = LinkedHashMap<String, DoubleArray>()
+
+        for (prefix in listOf("p", "m")) {
+            val (lower, middle, upper) = QUANTILES.values.map { q -> DoubleArray(n) { i -> exp(getQuantile(q, wet[i], doubleArrayOf(means.getValue(prefix)[0][i], means.getValue(prefix)[1][i]), doubleArrayOf(sigmas.getValue(prefix)[0][i], sigmas.getValue(prefix)[1][i]))) } }
+            out["${prefix}10"] = DoubleArray(n) { min(lower[it], middle[it] * (1 - MIN_BAND / 2)) }
+            out["${prefix}50"] = middle
+            out["${prefix}90"] = DoubleArray(n) { max(upper[it], middle[it] * (1 + MIN_BAND / 2)) }
         }
 
         return out
     }
 
-    // QUANTIS DO MULTIPLICADOR REARRANJADOS NA GRADE DE CHUVA (MAIS CHUVA NUNCA BARATEIA NEM ACELERA) E ORDENADOS PARA NUNCA CRUZAREM
-    fun getQuantiles(trees: List<List<Tree>>, X: Array<DoubleArray>): Array<DoubleArray> {
-        val k   = RAIN_GRID.size
-        val out = Array(3) { DoubleArray(X.size) }
-
-        // linhas independentes em paralelo: cada uma so escreve a sua posicao, entao o resultado nao depende da ordem
-        IntStream.range(0, X.size).parallel().forEach { i ->
-            val row    = X[i].copyOf()
-            val rain   = row[5].coerceIn(0.0, RAIN_GRID.last())
-            val j      = (RAIN_GRID.count { it <= rain } - 1).coerceIn(0, k - 2)
-            val w      = (rain - RAIN_GRID[j]) / (RAIN_GRID[j + 1] - RAIN_GRID[j])
-
-            val values = DoubleArray(3) { q ->
-                val curve = DoubleArray(k) { g -> row[5] = RAIN_GRID[g]; trees[q].sumOf { it.get(row) } }
-                curve.sort()
-                curve[j] * (1 - w) + curve[j + 1] * w
-            }
-
-            values.sort()
-            for (q in 0 until 3) out[q][i] = values[q]
-        }
-
-        return out
-    }
-
-    // ARVORES DE UM BOOSTER A PARTIR DO TEXTO DO LIGHTGBM, BLOCO "TREE=" POR BLOCO
-    fun getTrees(text: String) = text.substringBefore("end of trees").split("\nTree=").drop(1).map { block ->
-        val fields = block.lines().mapNotNull { line -> line.indexOf('=').takeIf { it > 0 }?.let { line.substring(0, it) to line.substring(it + 1) } }.toMap()
-        val tokens = { key: String -> fields[key].orEmpty().split(' ').filter(String::isNotEmpty) }
-        Tree(tokens("split_feature").map(String::toInt).toIntArray(), tokens("threshold").map(String::toDouble).toDoubleArray(), tokens("decision_type").map(String::toInt).toIntArray(), tokens("left_child").map(String::toInt).toIntArray(), tokens("right_child").map(String::toInt).toIntArray(), tokens("leaf_value").map(String::toDouble).toDoubleArray(), tokens("cat_boundaries").map(String::toInt).toIntArray(), tokens("cat_threshold").map { it.toLong().toInt() }.toIntArray())
-    }
-
-    fun getDoubles(array: JSONArray) = DoubleArray(array.length()) { array.getDouble(it) }
+    fun get(route: Route, ts: LongArray, rain: DoubleArray, probability: DoubleArray, company: String, calibration: Calibration) = getBands(route, ts, rain, probability, company, calibration).mapValues { (key, values) -> DoubleArray(values.size) { getRound(values[it], DIGITS.getValue(key.take(1))) } }
 }

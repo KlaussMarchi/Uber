@@ -9,7 +9,8 @@ from matplotlib.figure import Figure
 from matplotlib.patheffects import withStroke
 from matplotlib.ticker import FuncFormatter, MaxNLocator, MultipleLocator
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from Utils.functions import getDelay, getDuration, getLocal, getMoney, getSpan
+from Oracle.index import getFree
+from Utils.functions import getChance, getDelay, getDuration, getLocal, getMoney, getSpan
 from Utils.variables import COLORS, FONT, HORIZON, STEP
 
 
@@ -39,6 +40,7 @@ class Chart(ctk.CTkFrame):
     STEPS  = (1, 2, 5, 10, 15, 20, 30, 60, 120, 180, 360)                # minutos entre marcas do eixo do tempo de viagem; vale o menor passo com ate 3 intervalos
     DRY    = 0.05                                                        # mm/h abaixo do qual a janela inteira conta como seca
     CHANCE = 0.65                                                        # opacidade da celula com 100% de chance; acima disso o texto claro perde contraste
+    TEXT   = 13                                                          # px de altura de um rotulo de 9 pt; rotulo que encostaria no anterior nao e desenhado
 
     def __init__(self, master, cb):
         super().__init__(master, fg_color=COLORS['card'], corner_radius=16)
@@ -48,13 +50,14 @@ class Chart(ctk.CTkFrame):
 
         header = ctk.CTkFrame(self, fg_color='transparent')
         header.pack(fill='x', padx=22, pady=(18, 0))
-        self.heading = ctk.CTkLabel(header, text='Previsão de preço, chuva e tempo de viagem', font=ctk.CTkFont(FONT, 16, 'bold'), text_color=COLORS['text'], anchor='w')
+        self.heading = ctk.CTkLabel(header, text='Previsão de preço, chuva e tempo de viagem', font=ctk.CTkFont(FONT, 16, 'bold'), text_color=COLORS['text'], anchor='w', justify='left')
         self.heading.pack(side='left')
         self.window = ctk.CTkSlider(header, from_=1, to=self.HOURS, number_of_steps=self.HOURS - 1, width=170, height=16, command=self.handleWindow, fg_color=COLORS['input'], progress_color=COLORS['button'], button_color=COLORS['button'], button_hover_color=COLORS['pressed'])
         self.window.set(self.hours)
         self.window.pack(side='right', padx=(10, 0))
         self.label = ctk.CTkLabel(header, text=f'janela {self.hours} h', width=76, font=ctk.CTkFont(FONT, 12, 'bold'), text_color=COLORS['secondary'], anchor='e')
         self.label.pack(side='right')
+        header.bind('<Configure>', lambda event: self.heading.configure(wraplength=max(160, event.width - self.window.winfo_reqwidth() - self.label.winfo_reqwidth() - 30)))    # janela estreita: o titulo quebra a linha em vez de passar por baixo do controle
 
         self.figure = Figure(figsize=(9, 7), facecolor=COLORS['card'], layout='constrained')
         self.price, self.chance, self.rain, self.traffic = self.figure.subplots(4, 1, sharex=True, height_ratios=self.RATIOS)
@@ -88,12 +91,13 @@ class Chart(ctk.CTkFrame):
         self.cb()
 
     def plot(self, df, route, company):
-        view    = df[df['ts'] <= df['ts'].iloc[0] + self.hours * 3600].reset_index(drop=True)
-        local   = getLocal(view['ts'], route['tz'])
-        free    = route['duration']
-        self.df = view
+        view       = df[df['ts'] <= df['ts'].iloc[0] + self.hours * 3600].reset_index(drop=True)
+        local      = getLocal(view['ts'], route['tz'])
+        free       = getFree(route)
+        self.df    = view
         self.route = route
-        self.x  = mdates.date2num(local)
+        self.free  = free
+        self.x     = mdates.date2num(local)
         price, chance, rain, traffic = self.price, self.chance, self.rain, self.traffic
 
         for ax in self.figure.axes:
@@ -126,10 +130,10 @@ class Chart(ctk.CTkFrame):
         odds  = view['probability'].to_numpy()
         hours = pd.DataFrame({'x': self.x, 'odds': odds}).groupby(local.floor('h')).agg(start=('x', 'min'), end=('x', 'max'), odds=('odds', 'mean'), n=('x', 'size'))
         chance.set_facecolor(COLORS['input'])
-        chance.bar(self.x, 1, width=np.diff(self.x, append=self.x[-1]), align='edge', color=[(*to_rgb(COLORS['rain']), self.CHANCE * p / 100) for p in odds], linewidth=0)
+        chance.bar(self.x, 1, width=np.diff(self.x, append=self.x[-1]), align='edge', color=[(*to_rgb(COLORS['rain']), self.CHANCE * p / 100) for p in np.nan_to_num(odds)], linewidth=0)    # hora sem chance publicada fica sem cor e sem numero, como no celular
 
         for start, end, p, n in hours.itertuples(index=False):
-            if n >= 4:    # ao menos 40 min visiveis da hora para o rotulo caber sem encostar na borda; a janela de 1 h sempre tem uma assim
+            if n >= 4 and np.isfinite(p):    # ao menos 40 min visiveis da hora para o rotulo caber sem encostar na borda; a janela de 1 h sempre tem uma assim
                 chance.text((start + min(end + STEP / 86400, self.x[-1])) / 2, 0.5, f'{p:.0f}%', ha='center', va='center', fontsize=9, color=COLORS['text'])
 
         chance.grid(False)
@@ -159,12 +163,24 @@ class Chart(ctk.CTkFrame):
         traffic.xaxis.set_major_locator(mdates.AutoDateLocator(minticks=4, maxticks=9))
         traffic.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 
+        scale = traffic.get_window_extent().height / (top - bottom)    # px por minuto no painel
+        used  = -np.inf
+
         for level, name in self.LEVELS:
             minutes = free * (1 + level / 100)
+            above   = minutes < top - 0.12 * (top - bottom)    # rente ao topo do painel o rotulo vai para baixo da linha, para nao invadir o titulo
+            base    = (minutes - bottom) * scale + (3 if above else -3 - self.TEXT)
 
-            if minutes <= top:
-                traffic.axhline(minutes, color=COLORS['border'], linewidth=1)
-                traffic.annotate(f'{name} · {getDuration(minutes)}', (self.x[-1], minutes), xytext=(-4, 3), textcoords='offset points', ha='right', color=COLORS['muted'], fontsize=9, path_effects=[withStroke(linewidth=3, foreground=COLORS['card'])])
+            if minutes > top:
+                continue
+
+            traffic.axhline(minutes, color=COLORS['border'], linewidth=1)
+
+            if base < used:
+                continue
+
+            traffic.annotate(f'{name} · {getDuration(minutes)}', (self.x[-1], minutes), xytext=(-4, 3 if above else -3), textcoords='offset points', ha='right', va='bottom' if above else 'top', color=COLORS['muted'], fontsize=9, path_effects=[withStroke(linewidth=3, foreground=COLORS['card'])])
+            used = base + self.TEXT + 2
 
         # o eixo mostra a hora da rota; so avisa quando o fuso dela difere do relogio deste computador
         start = pd.Timestamp(int(view['ts'].iloc[0]), unit='s', tz=route['tz'])
@@ -184,7 +200,7 @@ class Chart(ctk.CTkFrame):
         row     = self.df.iloc[i]
         right   = i > len(self.df) / 2
         rain    = f"{row['rain']:.1f}".replace('.', ',')
-        seen    = f"\n{getMoney(row['price'])} e {getDuration(row['minutes'])}   observados" if i == 0 else ''
+        seen    = f"\ndinâmica estimada de {row['surge']:.2f}×   agora".replace('.', ',') if i == 0 else ''
         arrival = getLocal([row['ts'] + row['m50'] * 60], self.route['tz'])[0]
 
         for line in self.cursor:
@@ -192,7 +208,7 @@ class Chart(ctk.CTkFrame):
             line.set_visible(True)
 
         self.tip.xy = (self.x[i], row['p50'])
-        self.tip.set_text(f"{getLocal([row['ts']], self.route['tz'])[0]:%H:%M}{seen}\n{getMoney(row['p50'])}   previsto ({getMoney(row['p10'])} a {getMoney(row['p90'])})\n{getDuration(row['m50'])}   viagem ({getSpan(row['m10'], row['m90'])})\nchegada às {arrival:%H:%M}   {getDelay(row['m50'] - self.route['duration'])} de trânsito\n{rain} mm/h · {row['probability']:.0f}% de chance   chuva")
+        self.tip.set_text(f"{getLocal([row['ts']], self.route['tz'])[0]:%H:%M}{seen}\n{getMoney(row['p50'])}   previsto ({getMoney(row['p10'])} a {getMoney(row['p90'])})\n{getDuration(row['m50'])}   viagem ({getSpan(row['m10'], row['m90'])})\nchegada às {arrival:%H:%M}   {getDelay(row['m50'] - self.free)} de trânsito\n{rain} mm/h · {getChance(row['probability'])} de chance   chuva")
         self.tip.set_position((-14 if right else 14, 0))
         self.tip.set_ha('right' if right else 'left')
         self.tip.set_visible(True)

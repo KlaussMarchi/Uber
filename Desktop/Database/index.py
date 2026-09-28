@@ -9,9 +9,10 @@ from Utils.variables import DB_PATH
 sqlite3.register_adapter(np.int64, int)
 
 
-# SQLITE LOCAL (WAL) COM UMA CONEXAO POR OPERACAO; BANCO DE OUTRA VERSAO E RECRIADO PARA O WORKER REGERAR HISTORICO E MODELO
+# SQLITE LOCAL (WAL) COM UMA CONEXAO POR OPERACAO; BANCO DE OUTRA VERSAO E MIGRADO SEM PERDER AS ROTAS E OS PRECOS QUE O USUARIO INFORMOU
 class Database:
-    VERSION = 6   # sobe quando o esquema ou o oraculo mudam; o historico e sintetico, entao banco antigo e recriado
+    VERSION = 7    # sobe quando o esquema muda; o que e derivado e recalculado, o que o usuario fez fica
+    ROUTE   = ('id', 'origin', 'destination', 'o_lat', 'o_lon', 'd_lat', 'd_lon', 'distance', 'duration', 'tz', 'used_at')    # colunas que uma rota de versao antiga ja tinha
 
     SCHEMA = '''
         CREATE TABLE IF NOT EXISTS Routes (
@@ -24,20 +25,11 @@ class Database:
             d_lon       REAL    NOT NULL,
             distance    REAL    NOT NULL,
             duration    REAL    NOT NULL,
-            corridor    REAL    NOT NULL,
             tz          TEXT    NOT NULL,
             used_at     INTEGER NOT NULL,
+            city        TEXT    NOT NULL DEFAULT '',
+            uf          TEXT    NOT NULL DEFAULT '',
             UNIQUE (o_lat, o_lon, d_lat, d_lon)
-        );
-
-        CREATE TABLE IF NOT EXISTS Prices (
-            route_id INTEGER NOT NULL REFERENCES Routes (id),
-            ts       INTEGER NOT NULL,
-            rain     REAL    NOT NULL,
-            excess   REAL    NOT NULL,
-            noise    REAL    NOT NULL,
-            minutes  REAL    NOT NULL,
-            PRIMARY KEY (route_id, ts)
         );
 
         CREATE TABLE IF NOT EXISTS Forecasts (
@@ -58,23 +50,25 @@ class Database:
             id       INTEGER PRIMARY KEY,
             company  TEXT    NOT NULL,
             ts       INTEGER NOT NULL,
-            distance REAL    NOT NULL,
-            minutes  REAL    NOT NULL,
-            surge    REAL    NOT NULL,
+            route_id INTEGER NOT NULL,
+            lat      REAL    NOT NULL,
+            lon      REAL    NOT NULL,
+            city     TEXT    NOT NULL,
+            uf       TEXT    NOT NULL,
+            level    REAL    NOT NULL,
+            expected REAL    NOT NULL,
             observed REAL    NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS Metrics (
-            ts             INTEGER PRIMARY KEY,
-            version        INTEGER NOT NULL,
-            n              INTEGER NOT NULL,
-            price_mae      REAL    NOT NULL,
-            price_coverage REAL    NOT NULL,
-            time_mae       REAL    NOT NULL,
-            time_coverage  REAL    NOT NULL
+            ts       INTEGER PRIMARY KEY,
+            n        INTEGER NOT NULL,
+            observed INTEGER NOT NULL,
+            mae      REAL    NOT NULL,
+            mape     REAL    NOT NULL,
+            coverage REAL    NOT NULL
         );
 
-        CREATE INDEX IF NOT EXISTS ix_prices_ts ON Prices (ts);
         CREATE INDEX IF NOT EXISTS ix_forecasts_ts ON Forecasts (ts);
     '''
 
@@ -89,12 +83,26 @@ class Database:
             tables  = conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'").fetchone()[0]
 
             if version != self.VERSION and tables:
-                logging.warning(f'banco na versao {version}, esperado {self.VERSION}: historico sintetico sera recriado')
-                conn.executescript('DROP TABLE IF EXISTS Routes; DROP TABLE IF EXISTS Prices; DROP TABLE IF EXISTS Forecasts; DROP TABLE IF EXISTS Metrics;')    # Fares fica: os precos reais informados pelo usuario nao sao sinteticos
+                logging.warning(f'banco na versao {version}, esperado {self.VERSION}: migrando')
+                self.migrate(conn)
 
             conn.execute('PRAGMA journal_mode = WAL')
             conn.executescript(self.SCHEMA)
             conn.execute(f'PRAGMA user_version = {self.VERSION}')
+
+    # PREVISOES, METRICAS E O HISTORICO SINTETICO ANTIGO SAO RECALCULAVEIS; AS ROTAS ESCOLHIDAS FICAM (SAO OS LUGARES JA USADOS) E PRECO INFORMADO NO FORMATO ANTIGO SAI, PORQUE ERA RELATIVO AO MERCADO SIMULADO
+    def migrate(self, conn):
+        columns = lambda table: {row[1] for row in conn.execute(f'PRAGMA table_info({table})')}
+        routes  = ', '.join(self.ROUTE)
+        conn.executescript('DROP TABLE IF EXISTS Prices; DROP TABLE IF EXISTS Forecasts; DROP TABLE IF EXISTS Metrics; DROP TABLE IF EXISTS Legacy;')
+
+        if not {'expected', 'level', 'city'} <= columns('Fares'):
+            conn.execute('DROP TABLE IF EXISTS Fares')
+
+        if not set(self.ROUTE) <= columns('Routes'):
+            return conn.execute('DROP TABLE IF EXISTS Routes')
+
+        conn.executescript(f'ALTER TABLE Routes RENAME TO Legacy; {self.SCHEMA} INSERT INTO Routes ({routes}) SELECT {routes} FROM Legacy WHERE used_at > 0; DROP TABLE Legacy;')
 
     def connect(self):
         return sqlite3.connect(self.path, timeout=30)

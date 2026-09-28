@@ -1,16 +1,17 @@
 import logging, queue
 import customtkinter as ctk
 from concurrent.futures import ThreadPoolExecutor
-from time import strftime
+from datetime import date
+from time import strftime, time
 from Api.index import api
 from Engine.index import engine
-from Model.index import model
-from Oracle.index import FARES, TARIFFS
+import Oracle.index as oracle
+from Oracle.index import TARIFFS, getCalibration, getFree
 from Worker.index import worker
 from Interface.Chart.index import Chart
 from Interface.Locator.index import Locator
 from Interface.Search.index import Search
-from Utils.functions import getDelay, getDuration, getLocal, getMoney, getSpan
+from Utils.functions import getChance, getDelay, getDuration, getLocal, getMoney, getSpan
 from Utils.sound import play
 from Utils.variables import COLORS, COMPANIES, FONT
 
@@ -25,13 +26,13 @@ class Interface(ctk.CTk):
     SYNC   = 30000    # ms entre observacoes do preco em tempo real
     ALERT  = 0.10     # cada 10% de afastamento desde a primeira consulta toca um alerta; no mesmo patamar nao repete
     SIDE   = 430      # px da coluna de entrada
-    STATS  = [('distance', 'Distância'), ('corridor', 'Trecho na RJ-106'), ('duration', 'Tempo sem trânsito'), ('minutes', 'Tempo com trânsito agora'), ('rain', 'Chuva agora'), ('worst', 'Pior trânsito na janela'), ('peak', 'Pico de preço na janela'), ('low', 'Menor preço na janela')]
+    STATS  = [('distance', 'Distância'), ('surge', 'Dinâmica estimada agora'), ('duration', 'Tempo sem trânsito'), ('minutes', 'Tempo com trânsito agora'), ('rain', 'Chuva agora'), ('worst', 'Pior trânsito na janela'), ('peak', 'Pico de preço na janela'), ('low', 'Menor preço na janela')]
 
     def __init__(self):
         super().__init__(fg_color=COLORS['background'])
         self.title('Tarifa Dinâmica')
         self.geometry('1400x900')
-        self.minsize(1120, 800)
+        self.minsize(1040, 660)    # cabe em tela de notebook de 768 px; o painel lateral rola quando falta altura
         self.tasks     = queue.Queue()
         self.pool      = ThreadPoolExecutor(max_workers=4, thread_name_prefix='ui')
         self.company   = next(iter(COMPANIES))
@@ -50,16 +51,21 @@ class Interface(ctk.CTk):
 
         header = ctk.CTkFrame(self, fg_color='transparent')
         header.grid(row=0, column=0, columnspan=2, sticky='ew', padx=24, pady=(18, 12))
-        ctk.CTkLabel(header, text='Tarifa Dinâmica', font=ctk.CTkFont(FONT, 24, 'bold'), text_color=COLORS['text']).pack(side='left')
-        ctk.CTkLabel(header, text='previsão de preço de corrida por aplicativo', font=ctk.CTkFont(FONT, 13), text_color=COLORS['muted']).pack(side='left', padx=(12, 0), pady=(6, 0))
-        self.status = ctk.CTkLabel(header, text='', font=ctk.CTkFont(FONT, 12), text_color=COLORS['secondary'])
+        logo = ctk.CTkLabel(header, text='Tarifa Dinâmica', font=ctk.CTkFont(FONT, 24, 'bold'), text_color=COLORS['text'])
+        logo.pack(side='left')
+        tagline = ctk.CTkLabel(header, text='previsão de preço de corrida por aplicativo', font=ctk.CTkFont(FONT, 13), text_color=COLORS['muted'])
+        tagline.pack(side='left', padx=(12, 0), pady=(6, 0))
+        self.status = ctk.CTkLabel(header, text='', font=ctk.CTkFont(FONT, 12), text_color=COLORS['secondary'], justify='right', anchor='e')
         self.status.pack(side='right', pady=(6, 0))
+        header.bind('<Configure>', lambda event: self.status.configure(wraplength=max(240, event.width - logo.winfo_reqwidth() - tagline.winfo_reqwidth() - 60)))    # status longo quebra a linha em vez de cobrir o subtitulo
         self.dot = ctk.CTkLabel(header, text='●', font=ctk.CTkFont(FONT, 12), text_color=COLORS['muted'])
         self.dot.pack(side='right', padx=(0, 8), pady=(6, 0))
 
-        side = ctk.CTkFrame(self, width=self.SIDE, fg_color=COLORS['card'], corner_radius=16)
+        side = ctk.CTkScrollableFrame(self, width=self.SIDE, fg_color=COLORS['card'], corner_radius=16, scrollbar_fg_color=COLORS['card'], scrollbar_button_color=COLORS['card'], scrollbar_button_hover_color=COLORS['card'])
         side.grid(row=1, column=0, sticky='ns', padx=(24, 12), pady=(0, 24))
-        side.pack_propagate(False)
+        side.bind('<Configure>', self.showScroll, add='+')
+        side.master.bind('<Configure>', self.showScroll, add='+')
+        self.side = side
 
         self.selector = ctk.CTkSegmentedButton(side, values=list(COMPANIES.values()), height=38, corner_radius=10, font=ctk.CTkFont(FONT, 14, 'bold'), fg_color=COLORS['input'], selected_color=COLORS['button'], selected_hover_color=COLORS['pressed'], unselected_color=COLORS['input'], unselected_hover_color=COLORS['hover'], text_color=COLORS['text'], command=self.handleCompany)
         self.selector.set(COMPANIES[self.company])
@@ -84,7 +90,7 @@ class Interface(ctk.CTk):
         self.price.pack(fill='x', padx=22)
         self.change = ctk.CTkLabel(side, text='', height=20, font=ctk.CTkFont(FONT, 13, 'bold'), text_color=COLORS['muted'], anchor='w')
         self.change.pack(fill='x', padx=22)
-        self.range = ctk.CTkLabel(side, text='', height=20, font=ctk.CTkFont(FONT, 12), text_color=COLORS['secondary'], anchor='w')
+        self.range = ctk.CTkLabel(side, text='', height=20, font=ctk.CTkFont(FONT, 12), text_color=COLORS['secondary'], wraplength=self.SIDE - 44, justify='left', anchor='w')
         self.range.pack(fill='x', padx=22)
 
         row = ctk.CTkFrame(side, fg_color='transparent')
@@ -110,7 +116,7 @@ class Interface(ctk.CTk):
             self.stats[key] = ctk.CTkLabel(cell, text='—', height=24, font=ctk.CTkFont(FONT, 15, 'bold'), text_color=COLORS['text'], anchor='w')
             self.stats[key].pack(fill='x', padx=12, pady=(0, 6))
 
-        ctk.CTkLabel(side, text='Preços simulados sobre a tarifa de cada aplicativo. Endereços (OpenStreetMap), rotas (OSRM) e clima (Open-Meteo) são dados reais.', font=ctk.CTkFont(FONT, 11), text_color=COLORS['muted'], wraplength=self.SIDE - 44, justify='left', anchor='w').pack(side='bottom', fill='x', padx=22, pady=(0, 16))
+        ctk.CTkLabel(side, text='Preço estimado pelas médias reais da Uber no último mês na região de origem; a 99, pela razão típica entre as duas. Informe o preço que o app mostra para ajustar. Endereços (OpenStreetMap), rotas (OSRM) e clima (Open-Meteo) são dados reais.', font=ctk.CTkFont(FONT, 11), text_color=COLORS['muted'], wraplength=self.SIDE - 44, justify='left', anchor='w').pack(fill='x', padx=22, pady=(12, 16))
 
         self.chart = Chart(self, self.showWindow)
         self.chart.grid(row=1, column=1, sticky='nsew', padx=(12, 24), pady=(0, 24))
@@ -223,12 +229,13 @@ class Interface(ctk.CTk):
         self.range.configure(text=f"próximos 10 min entre {getMoney(df['p10'][1])} e {getMoney(df['p90'][1])} · viagem de {getSpan(df['m10'][1], df['m90'][1])}")
 
         worst  = view.loc[view['m50'].idxmax()]
+        free   = getFree(route)
         values = {
             'distance': f"{route['distance']:.1f} km".replace('.', ','),
-            'corridor': f"{route['corridor']:.0%}",
-            'duration': getDuration(route['duration']),
-            'minutes':  f"{getDuration(now['minutes'])} · {getDelay(now['minutes'] - route['duration'])}",
-            'rain':     f"{now['rain']:.1f} mm/h · {now['probability']:.0f}%".replace('.', ','),
+            'surge':    f"{now['surge']:.2f}×".replace('.', ','),
+            'duration': getDuration(free),
+            'minutes':  f"{getDuration(now['minutes'])} · {getDelay(now['minutes'] - free)}",
+            'rain':     f"{now['rain']:.1f}".replace('.', ',') + f" mm/h · {getChance(now['probability'])}",
             'worst':    f"{getDuration(worst['m50'])} · {getLocal([worst['ts']], route['tz'])[0]:%H:%M}",
             'peak':     f"{getMoney(peak['p50'])} · {getLocal([peak['ts']], route['tz'])[0]:%H:%M}",
             'low':      f"{getMoney(low['p50'])} · {getLocal([low['ts']], route['tz'])[0]:%H:%M}",
@@ -238,6 +245,7 @@ class Interface(ctk.CTk):
             self.stats[key].configure(text=value)
 
         self.chart.plot(df, route, COMPANIES[company])
+        self.showFare()
 
     # NOVA JANELA ESCOLHIDA NO GRAFICO: REDESENHA COM OS MESMOS DADOS, SEM CONSULTAR NADA
     def showWindow(self):
@@ -259,7 +267,7 @@ class Interface(ctk.CTk):
     def showStatus(self):
         self.jobs['status'] = self.after(self.STATUS, self.showStatus)
         self.status.configure(text=worker.status)
-        self.dot.configure(text_color=COLORS['success'] if model.ready() else COLORS['muted'])
+        self.dot.configure(text_color=COLORS['error'] if worker.status.startswith('Erro') else COLORS['success'])
 
     def check(self, route, company, price):
         key   = (route['id'], company)
@@ -292,29 +300,43 @@ class Interface(ctk.CTk):
             return self.message.configure(text='Calcule um preço antes de calibrar.', text_color=COLORS['error'])
 
         if not text.replace('.', '', 1).isdigit():
-            return self.message.configure(text='Informe o preço real do aplicativo, como 54,85 (0 apaga a calibração).', text_color=COLORS['error'])
+            return self.message.configure(text='Informe o preço que o aplicativo mostra agora, como 54,85 (0 apaga os seus preços).', text_color=COLORS['error'])
 
         route, company = self.route, self.company
         self.fare.delete(0, 'end')
-        self.message.configure(text='Calibrando a tarifa…', text_color=COLORS['muted'])
+        self.message.configure(text='Registrando o preço real…', text_color=COLORS['muted'])
         self.submit(lambda: engine.setFare(route, company, float(text)), lambda count: self.showCalibration(route, company, count))
 
     # TARIFA RECEM-AJUSTADA: A REFERENCIA DA VARIACAO RECOMECA, PORQUE O PRECO MUDOU DE NIVEL
     def showCalibration(self, route, company, count):
         if count is None:
-            return self.message.configure(text='Não foi possível calibrar agora: a previsão desta rota está indisponível.', text_color=COLORS['error'])
+            return self.message.configure(text='Não foi possível registrar agora: a previsão do tempo desta rota está indisponível.', text_color=COLORS['error'])
 
         self.baselines.pop((route['id'], company), None)
         self.levels.pop((route['id'], company), None)
         self.showFare()
-        self.message.configure(text=f'Tarifa da {COMPANIES[company]} ajustada a {count} preço(s) informado(s).' if count else f'Calibração da {COMPANIES[company]} apagada: voltou à tabela publicada.', text_color=COLORS['muted'])
+        self.message.configure(text=f"Preço da {COMPANIES[company]} registrado: a previsão parte dele agora e a média da região se ajusta ({count} {'preço seu' if count == 1 else 'preços seus'})." if count else f'Preços informados da {COMPANIES[company]} apagados: voltou à média real da região.', text_color=COLORS['muted'])
         self.getTick(route, self.company)
 
-    # ORIGEM DA TARIFA EM USO, SOB O CAMPO DE PRECO REAL
+    # DE ONDE VEM O PRECO EM USO, SOB O CAMPO DE PRECO REAL: A MEDIA REAL DA REGIAO E QUANTOS PRECOS INFORMADOS POR PERTO AJUSTAM ELA
     def showFare(self):
-        fare = FARES[self.company]
-        note = 'tabela publicada' if fare == TARIFFS[self.company] else f"calibrada em R$ {fare['km']:.2f}/km e R$ {fare['minute']:.2f}/min"
-        self.hint.configure(text=f'Tarifa {COMPANIES[self.company]}: {note}'.replace('.', ','))
+        name    = COMPANIES[self.company]
+        updated = date.fromisoformat(oracle.MARKET['updated']).strftime('%d/%m/%Y')
+
+        if self.route is None:
+            return self.hint.configure(text=f"{name}: médias reais da Uber de {updated} em {oracle.MARKET['routes']} trechos; informe o preço do app para ajustar")
+
+        calibration = getCalibration(self.route, self.company, time())
+        market      = calibration['market']['market']
+        ratio       = f"{TARIFFS[self.company]['ratio']:.2f}".replace('.', ',')
+        base        = f'média real da UberX em {market}' if self.company == 'uber' else f'UberX de {market} × {ratio}'
+        seen        = f"ajustada a {calibration['count']} {'preço seu' if calibration['count'] == 1 else 'preços seus'} por perto" if calibration['count'] else 'sem preço seu por perto'
+        self.hint.configure(text=f'{name}: {base} · {seen}')
+
+    # BARRA DE ROLAGEM DO PAINEL LATERAL SO APARECE QUANDO O CONTEUDO NAO CABE NA ALTURA DA JANELA
+    def showScroll(self, event=None):
+        color = COLORS['card'] if self.side.winfo_reqheight() <= self.side.master.winfo_height() else COLORS['border']
+        self.side.configure(scrollbar_button_color=color, scrollbar_button_hover_color=COLORS['hover'] if color == COLORS['border'] else color)
 
     # ERRO EM CALLBACK DO TK VAI PARA O LOG DO APP EM VEZ DE SUMIR NO TERMINAL
     def report_callback_exception(self, exc, val, tb):

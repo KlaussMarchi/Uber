@@ -2,17 +2,20 @@
 
 App desktop em Python (modo escuro) que mostra, para uma corrida por aplicativo, o preço e o tempo de viagem
 agora e a previsão das próximas horas em três linhas no mesmo eixo de tempo: preço (p10, p50, p90), chuva
-prevista (chance por hora e mm/h) e tempo de viagem previsto. Um seletor no topo escolhe entre **Uber** e **99**,
-cada uma com a sua tarifa e a sua dinâmica. Janela ajustável de 1 a 12 h, passos de 10 min e acompanhamento em
-tempo real com alerta sonoro quando o preço se afasta 10% do valor da primeira consulta. A versão Android, com o
-mesmo modelo e os mesmos números, fica em `../Mobile`.
+prevista (chance por hora e mm/h) e tempo de viagem previsto. Um seletor no topo escolhe entre **Uber** e **99**.
+Janela ajustável de 1 a 12 h, passos de 10 min e acompanhamento em tempo real com alerta sonoro quando o preço se
+afasta 10% do valor da primeira consulta. A versão Android, com a mesma tabela e os mesmos números, fica em
+`../Mobile`.
 
-> **Os preços são simulados.** Não existe API pública gratuita de preços da Uber ou da 99 — a Uber restringe a
-> API de estimativas a parceiros e a 99 não tem API pública —, então o preço vem de um oráculo que simula o
-> mercado (`Oracle/`) sobre a tabela de tarifas de cada aplicativo. **Para o valor bater com o que o app cobra de
-> verdade na sua cidade, informe um preço real** no campo *preço real no app*: a tarifa daquele aplicativo passa
-> a ser ajustada a ele. O resto é dado real e aberto: endereços (OpenStreetMap via Photon e Nominatim), rotas
-> (OSRM), clima (Open-Meteo) e localização (Wi-Fi pelo BeaconDB e IP).
+> **De onde vem o preço.** Não existe API pública gratuita de preços: a página de estimativa da Uber passou a exigir
+> login (manda para `m.uber.com`), o endpoint que ela usava foi desativado e a 99 nunca teve API pública. O que a
+> Uber publica, sem login, são as **médias reais do último mês por trecho** (preço médio da UberX, distância e tempo
+> médios das viagens). O app foi ajustado a **699 dessas médias, de 219 municípios em 19 estados, coletadas em
+> 26/09/2026**: delas saem a tarifa sem dinâmica, o nível de preço de cada município de origem e quanto o tempo real
+> de viagem passa do tempo sem trânsito do OSRM. A 99 sai da razão típica entre as duas (0,90). O resto é dado real e
+> aberto: endereços e municípios (OpenStreetMap via Photon e Nominatim), rotas (OSRM), clima (Open-Meteo) e
+> localização (Wi-Fi pelo BeaconDB e IP). **Para o valor bater com o que o app cobra agora, informe o preço real**:
+> ele passa a valer exatamente naquele instante e ajusta a região.
 
 ## Como rodar
 
@@ -24,282 +27,209 @@ pip install -r requirements.txt
 python index.py
 ```
 
-- No primeiro boot a janela abre na hora e o worker leva ~2 min para baixar rotas e um ano de chuva, gerar o
-  histórico e treinar.
-- Tudo fica em `data/`: `surge.db` (SQLite), `model.json`, `app.log` e os dois sons de alerta.
-- Para recomeçar do zero, apague `data/`. Se o esquema, o oráculo ou as rotas do bootstrap mudarem de versão, o
-  banco é recriado sozinho.
-- `python test.py` roda a validação completa (~12 min, com rede, abre uma janela de teste e usa banco temporário).
-- `python bootstrap.py` gera só o histórico sintético, sem abrir a janela.
+- A janela abre pronta: não há treino nem histórico para gerar. Tudo o que o app escreve fica em `data/`
+  (`surge.db`, `app.log` e os dois sons de alerta); a tabela ajustada fica em `Oracle/markets.json`.
+- Um banco de versão anterior é migrado sozinho: as rotas que você usou (os lugares já usados) ficam, o que era
+  derivado é recalculado.
+- `python test.py` roda a validação completa (~20 min, com rede, abre uma janela de teste e usa banco temporário).
+- `python market.py` refaz a tabela a partir dos trechos guardados em `Oracle/routes.csv` (~20 s); apague esse
+  arquivo para coletar médias novas da Uber (~1 h, devagar de propósito).
 
 ## Como usar
 
 1. Escolha o aplicativo no seletor **Uber | 99**. Trocar recalcula o preço e o gráfico na hora, sem consultar a
-   rede de novo: a rota, o clima e o modelo são os mesmos, só a tarifa e a dinâmica mudam.
+   rede de novo.
 2. Digite origem e destino. A lista de sugestões aparece enquanto você digita, com aviso de carregando.
 3. O botão ◎ de cada campo abre a janela "Onde você está?": escolha um lugar já usado, em um clique, ou marque
    o ponto exato no mapa. O mapa abre na estimativa de localização; quando ela é grosseira (por IP, quilômetros de
    erro), abre no lugar já usado mais recente dentro dessa área, e sem estimativa abre no último lugar usado ou na
    região. Arraste para mover, use a roda do mouse ou +/− para o zoom e clique no ponto exato.
-4. **Calcular preço** mostra o preço e o tempo de viagem de agora, o resumo da rota e as três linhas do gráfico:
-   - **Preço da corrida** (a maior): preço previsto com a faixa p10–p90, o preço observado agora e o pico da janela;
+4. **Calcular preço** mostra o preço estimado agora, a dinâmica estimada, o tempo de viagem, o resumo da rota e as
+   três linhas do gráfico:
+   - **Preço da corrida** (a maior): preço previsto com a faixa p10–p90, o preço de agora e o pico da janela;
    - **Chuva prevista**: a chance de chuva hora a hora numa faixa colorida e, logo abaixo, a intensidade em mm/h;
-   - **Tempo de viagem previsto**: quanto tempo leva até o destino saindo em cada horário, em minutos (ou horas nas
-     rotas longas), com a faixa m10–m90 e as linhas sem trânsito, moderado e intenso.
+   - **Tempo de viagem previsto**: quanto tempo leva até o destino saindo em cada horário, com a faixa m10–m90 e
+     as linhas sem trânsito, moderado e intenso.
    Passando o mouse, uma cruzeta mostra preço, tempo de viagem, hora de chegada, minutos a mais pelo trânsito e
    chuva daquele horário.
-5. O controle no topo do gráfico escolhe a janela de 1 a 12 h. A série inteira já vem calculada, então trocar a
-   janela não recalcula nada nem muda a precisão.
-6. O **tempo real** fica sempre ligado, sem botão: a cada 30 s o preço da rota na tela é observado de novo:
-   - o preço fica **azul com ▼** quando está abaixo do valor da primeira consulta da rota e **vermelho com ▲**
-     quando está acima, sempre com a porcentagem acumulada;
-   - a cada 10% de afastamento toca um alerta: arpejo ascendente quando cai, grave descendente quando sobe;
-   - o alerta não se repete no mesmo patamar; toca de novo quando passa o próximo múltiplo de 10%.
-7. **Calibrar com o preço real.** Abra a Uber ou a 99 na mesma rota, veja o valor que o app cobra agora, digite-o
-   em *preço real no app* e clique em **Calibrar**: a tarifa daquele aplicativo passa a bater com ele. Quanto mais
-   preços você informar, em rotas de tamanhos diferentes, mais a tabela inteira converge. **0** apaga a calibração
-   e volta à tabela publicada. A linha sob o campo diz sempre qual tarifa está em uso.
+5. O controle no topo do gráfico escolhe a janela de 1 a 12 h. A série inteira já vem calculada.
+6. O **tempo real** fica sempre ligado: a cada 30 s o preço da rota é recalculado. Ele fica **azul com ▼** abaixo
+   do valor da primeira consulta e **vermelho com ▲** acima, e a cada 10% de afastamento toca um alerta (arpejo
+   ascendente quando cai, grave descendente quando sobe), sem repetir no mesmo patamar.
+7. **Informar o preço real.** Abra a Uber ou a 99 na mesma rota, veja o valor que o app cobra agora, digite-o em
+   *preço real no app* e clique em **Calibrar**. Na hora o preço de agora passa a ser exatamente esse e a faixa se
+   estreita; nas horas seguintes a dinâmica que ele revelou se dissipa e a parte que persiste fica no nível da
+   região. A nota sob o campo diz de onde vem o preço e quantos preços seus por perto o ajustam; **0** apaga os seus
+   preços daquele aplicativo.
+8. A barra de status mostra a data das médias em uso e, depois que você informa preços em rotas monitoradas, quanto
+   as previsões feitas antes deles erraram — o teste mais honesto da projeção, feito com os seus preços.
 
 ## Estrutura
 
 ```
-index.py            ponto de entrada: log, worker e janela
-bootstrap.py        gerador do histórico sintético do primeiro boot (14 rotas reais)
-test.py             validação de relógio, serviços, distâncias, oráculo, tarifas, cenários, precisão, rotas fora do treino, acidentes, worker e janela
-Api/index.py        Photon, Nominatim, OSRM (com espelho de reserva), Open-Meteo, BeaconDB e provedores de IP, com fila por servidor e retentativa
-Database/index.py   SQLite em WAL: Routes, Prices (estado do mercado), Forecasts, Fares (preços reais informados) e Metrics
-Engine/index.py     rota, clima, preço e tempo observados agora, série ancorada e calibração da tarifa
-Model/index.py      LightGBM quantílico por aplicativo, âncora por horizonte com corte de choque e calibração conformal
-Oracle/index.py     tarifa de cada aplicativo e mercado simulado que define o preço
-Worker/index.py     oráculo a cada 10 min, consolidação das previsões dos dois aplicativos e retreino
+index.py            ponto de entrada: log, banco, worker e janela
+market.py           coleta das médias reais da Uber, ajuste da tabela e validação cruzada
+test.py             validação de relógio, serviços, municípios, tabela contra os dados reais, mercado, faixas, calibração, rotas, worker e janela
+Api/index.py        Photon, Nominatim (texto livre e município), OSRM (com espelho de reserva), Open-Meteo, BeaconDB e provedores de IP
+Database/index.py   SQLite em WAL: Routes, Forecasts, Fares (preços reais informados) e Metrics, com migração
+Engine/index.py     rota com município de origem, clima, preço e tempo esperados agora, série calibrada e registro do preço real
+Market/index.py     coleta (sitemap e páginas de trecho da Uber, sedes do IBGE, OSRM) e ajuste por município com validação cruzada
+Model/index.py      faixas p10–p90 e m10–m90: mistura dos cenários seco e chuvoso com a incerteza do nível, da dinâmica e do trânsito
+Oracle/index.py     tabela real, perfil horário, mercado esperado e calibração bayesiana pelos preços informados
+Oracle/markets.json tabela ajustada (tarifa sem dinâmica, ritmo, incertezas, nível de cada estado e município)
+Oracle/routes.csv   os 699 trechos reais usados no ajuste e na validação
+Worker/index.py     previsão das rotas monitoradas a cada 10 min e acerto medido contra os preços reais informados
 Interface/          janela (index.py), gráfico (Chart/), campo com autocomplete (Search/) e escolha do ponto no mapa (Locator/)
 Utils/              constantes, relógio com feriados e alertas sonoros
 ```
 
 ## Arquitetura
 
-**Tarifa de cada aplicativo.** O seletor troca entre Uber e 99, e cada uma tem a sua tabela: bandeirada, valor
-por km, valor por minuto, taxa fixa, tarifa mínima, sensibilidade à dinâmica e teto dela. A tabela da Uber
-reproduz os R$ 54,85 medidos na rota de referência em dia útil fora do pico; a da 99 fica cerca de 10% abaixo
-nesse mesmo horário e mais ainda no pico, porque a dinâmica dela reage menos ao excesso de demanda — é o que a
-comparação pública mostra (a 99 tem o menor preço base em 19 das 27 capitais e o menor preço por minuto em 21).
-A referência publicada da UberX na capital do Rio em 2026 é bandeirada R$ 2,30, R$ 1,55/km, R$ 0,32/min, mínima
-R$ 10,50 e taxa de reserva R$ 0,75; a 99 abandonou a tabela fixa e passou a precificar por região e demanda.
-O **tempo de viagem não muda com o aplicativo**: o trânsito é do mercado, e os dois mostram o mesmo m50.
+**Médias reais da Uber.** Cada página de trecho da Uber (`uber.com/global/pt-br/r/routes/…`, liberada pelo
+`robots.txt` e listada no sitemap) traz o preço médio da UberX no último mês entre dois municípios, a distância e o
+tempo médios dessas viagens e quantas foram feitas. O `market.py` sorteia trechos do sitemap (todos os estados, mais
+peso no Rio de Janeiro), lê cada página a cada 2 s, localiza os municípios pelas sedes do IBGE e traça a rota de sede
+a sede no OSRM. O resultado fica em `Oracle/routes.csv`, com a data da coleta.
 
-**Calibração com o preço real.** Como a tarifa varia por cidade e muda sem aviso, o campo *preço real no app*
-ancora a tabela no que você vê de verdade: digite o valor que a Uber ou a 99 mostra agora para a rota na tela e
-clique em **Calibrar**. O app guarda a observação com o estado do mercado daquele instante (distância, minutos e
-multiplicador da dinâmica) e reajusta os coeficientes por mínimos quadrados, com uma crista que segura a forma da
-tabela publicada: com um preço só, o nível inteiro se desloca e aquela rota passa a bater exatamente; com três ou
-mais, em rotas de tamanhos diferentes, a forma também se ajusta e o acerto passa a valer para rotas que você não
-informou (com seis preços 12% acima da tabela, o erro residual fica abaixo de 0,7% em todas elas). Preço abaixo da
-tarifa mínima calibra o piso. Nenhuma correção passa do dobro nem da metade da tabela publicada, para um valor
-digitado errado não destruir a tarifa, e **0** apaga a calibração daquele aplicativo. Os preços informados ficam
-na tabela `Fares`, que sobrevive à recriação do banco, e valem para qualquer rota daquele aplicativo.
+**Tarifa e nível por município.** O preço médio de cada trecho é o nível do município de origem vezes a tarifa sem
+dinâmica — bandeirada, km, minuto e um valor por km acima de 40 km, porque a viagem intermunicipal volta vazia —
+aplicada ao tempo de cada hora da semana, vezes a dinâmica daquela hora, ponderado pelo volume de viagens. O nível
+de cada município é encolhido para o do estado e o do estado para o do país (crista), então um município com poucos
+trechos fica perto do estado. A tarifa nacional sem dinâmica saiu em **R$ 3,00 + R$ 1,21/km + R$ 0,31/min
+(+ R$ 0,22/km acima de 40 km)**, mínima de R$ 10, no nível nacional; o nível dos municípios vai de 0,84 (São José/SC) a
+1,40 (Barueri/SP); o Rio de Janeiro fica em 1,06, São Paulo em 1,35 e Macaé em 0,89. A origem
+de cada rota é localizada pelo Nominatim no nível de município (a fronteira do OSM), uma vez por rota: Ilha do
+Governador conta como Rio de Janeiro, Xerém como Duque de Caxias. Município sem trecho publicado usa a média dos
+vizinhos do mesmo estado, puxada para o estado.
 
-**Interface.** CustomTkinter 6 com matplotlib embutido. O Tk já vem no Linux e não depende de plugin de
-plataforma como o Qt (xcb). A chuva tem linha própria com o mesmo eixo de tempo: a chance (%) numa faixa
-colorida hora a hora e a intensidade (mm/h) logo abaixo, cada uma com a sua escala, porque dois eixos y no mesmo
-gráfico confundem as escalas. Não há caixas de legenda: o título de cada linha diz o que ela mostra. As cores das
-séries foram validadas contra o fundo escuro (luminância, daltonismo e contraste).
+**Tempo de viagem.** O OSRM dá o tempo sem trânsito, otimista: nas médias reais, a viagem urbana curta leva até o
+dobro e a rodovia rápida uns 15% a mais. O ritmo real sobre o OSRM foi ajustado pelo tamanho do trecho, pela
+velocidade que o OSRM supõe e pelo município e estado de origem (erro mediano de 7,8% fora da amostra). Ao longo da
+semana ele segue o **congestionamento real hora a hora do TomTom Traffic Index 2025**, média das 9 metrópoles
+brasileiras do índice (Rio, São Paulo, Belo Horizonte, Recife, Porto Alegre, Fortaleza, Curitiba, Salvador e
+Brasília, com correlação de 0,97 entre elas): 60–65% de tempo a mais às 7–8 h, 40–47% no meio do dia, 73–77% às
+17–18 h nos dias úteis, 40% no sábado ao meio-dia e 1–5% de madrugada; de madrugada fica um quarto do atraso médio
+(semáforos, conversões, vias lentas). Chuva forte alonga a viagem até 25%. O tempo não muda com o aplicativo.
+
+**Dinâmica.** A demanda da semana local (picos de manhã e de tarde, sexta à noite, madrugadas de fim de semana,
+domingo à tarde, feriados valendo como domingo) e a chuva formam o excesso de demanda; a dinâmica é 1 + esse excesso
+(até 1,35× no pico mais forte, até 0,40 a mais com chuva forte), limitada a 2,5×. A média do mês ponderada pelo
+volume de viagens é a que o ajuste casa com a Uber, então a tarifa sem dinâmica e o perfil somam o preço real médio.
+
+**Faixas.** A faixa p10–p90 junta tudo o que não se sabe, cada coisa com o seu tamanho: o nível da região (o erro da
+validação cruzada: 11% num município da tabela, 13% num município novo), a dinâmica do instante (10% fora do pico,
+mais no pico e na chuva), o tempo de viagem no preço por minuto, e a chuva pela **chance real do Open-Meteo**: cada
+instante é uma mistura do cenário seco e do chuvoso, com o peso da chance, e os quantis saem da mistura por bisseção.
+Mais chuva ou mais chance nunca reduzem nenhum quantil, e p10 < p50 < p90 sempre.
+
+**Preço real informado.** Cada preço guarda o preço central que o app mostrava sem calibração naquele instante e o
+nível da região usado. O desvio entre os dois se divide em duas partes, pela estatística bayesiana: o **nível** da
+região (persistente; prioriza a incerteza da tabela e pesa cada preço pela distância da origem, meia-vida de ~35 km)
+e a **dinâmica** do instante, que vale inteira por 2 min e se dissipa com constante de 45 min. Por isso o preço
+informado aparece exato na hora, a faixa se estreita e, três horas depois, sobra só a parte que persiste (com um
+preço 25% acima, ~13%). Contam os 20 preços mais recentes de cada aplicativo; um preço fora de metade a dobro do
+esperado é tratado como erro de digitação; o preço de um aplicativo não mexe no outro.
+
+**Worker.** Uma thread alinhada aos slots de 10 min guarda a previsão das próximas 12 h das 5 rotas usadas mais
+recentemente, nos dois aplicativos, e compara as previsões feitas antes de cada preço informado com ele: erro médio
+e cobertura da faixa vão para a tabela `Metrics` e para a barra de status. É a medida real, com os seus preços, de
+quanto a projeção acerta.
+
+**Interface.** CustomTkinter 6 com matplotlib embutido. O painel lateral rola quando a janela é baixa (cabe em
+notebook de 768 px) e o status e os títulos quebram linha em janela estreita. A chuva tem linha própria com o mesmo
+eixo de tempo: a chance (%) numa faixa colorida hora a hora e a intensidade (mm/h) logo abaixo. Não há caixas de
+legenda: o título de cada linha diz o que ela mostra. As cores das séries foram validadas contra o fundo escuro.
 
 **Nada de rede na thread do Tk.** Toda consulta roda em um `ThreadPoolExecutor`; o resultado volta por uma fila
 lida a cada 50 ms com `after`, e só esse callback mexe nos widgets.
 
 **Endereços.** O autocomplete usa o Photon, que é construído sobre o OpenStreetMap e casa prefixos:
 "Rua Professor Antônio Ava" já encontra a rua de origem, que no OSM está grafada "Avarez Parada". O Nominatim
-fica para validar texto livre, em uma consulta por clique: a política de uso dele proíbe autocomplete e, nos
-testes, ele não encontra palavras incompletas. A busca espera 350 ms de pausa na digitação e descarta respostas
-de buscas antigas.
+fica para validar texto livre, em uma consulta por clique, e para achar o município da origem, uma vez por rota: a
+política de uso dele proíbe autocomplete. A busca espera 350 ms de pausa na digitação e descarta respostas antigas.
 
-**Localização atual.** Sem GPS, nenhuma fonte gratuita acerta a rua, e não existe serviço que resolva isso: o
-Mapbox e os concorrentes não vendem localização por IP, eles usam o GPS do próprio aparelho. O que dá para fazer é
-perguntar a várias fontes ao mesmo tempo e ficar com a mais precisa: o app dispara em paralelo o BeaconDB (que usa
-as redes Wi-Fi visíveis, lidas pelo `nmcli`, e devolve a precisão em metros) e três provedores de IP sem cadastro
-(geojs, ipwho.is e ipinfo), tira a mediana das coordenadas deles e usa a dispersão entre elas como erro declarado.
-Onde o BeaconDB tem varredura de Wi-Fi ele ganha, com erro no nível da rua; onde não tem, ele cai para IP e
-declara ~25 km, enquanto a mediana dos três provedores fica em ~10 km — e é ela que vale. Tudo isso em cerca de
-1 s, porque as consultas são simultâneas. Por isso o ◎ não preenche sozinho: ele abre a janela "Onde você está?", com os lugares
-que você já confirmou (exatos, um clique) e um mapa escuro que se arrasta. Com estimativa precisa o mapa abre nela;
-com estimativa grosseira, abre no nível da rua no lugar já usado mais recente que cabe no erro dela, porque quem
-já usou o app em casa quase sempre está perto de onde já esteve; sem estimativa, abre no último lugar usado ou na
-região. O clique marca o ponto na hora — "Usar este ponto" nunca pega o ponto anterior, e um endereço atrasado de
-outro clique é descartado — e o ponto vira endereço pelo Photon reverso. Os lugares já usados são só os que você
-escolheu: as rotas sintéticas do bootstrap ficam de fora. Os tiles vêm do OpenTopoMap (CC-BY-SA), com a OSM France
-de reserva, porque os servidores principais do OSM recusam quem não é navegador e o CARTO passou a exigir chave; o
-app inverte as imagens em tons de cinza para combinar com o tema. O Android usa exatamente o mesmo critério, com o
-GPS do celular no lugar da estimativa por IP.
+**Localização atual.** Sem GPS, nenhuma fonte gratuita acerta a rua. O app dispara em paralelo o BeaconDB (redes
+Wi-Fi visíveis, lidas pelo `nmcli`) e três provedores de IP sem cadastro (geojs, ipwho.is e ipinfo), tira a mediana
+das coordenadas deles e usa a dispersão como erro declarado; vale a fonte mais precisa. Por isso o ◎ abre a janela
+"Onde você está?", com os lugares já usados (exatos, um clique) e um mapa escuro que se arrasta. Com estimativa
+precisa o mapa abre nela; com estimativa grosseira, no lugar já usado mais recente que cabe no erro dela; sem
+estimativa, no último lugar usado ou na região. O clique marca o ponto na hora e o ponto vira endereço pelo Photon
+reverso. Os tiles vêm do OpenTopoMap (CC-BY-SA), com a OSM France de reserva, invertidos em tons de cinza.
 
-**Rota e clima.** O OSRM entrega distância, duração sem trânsito e os trechos, de onde sai a fração do percurso
-na Rodovia Amaral Peixoto (RJ-106) — 62% na rota de teste. O servidor público do OSRM é de demonstração; quando
-ele falha, a mesma consulta vai ao espelho da FOSSGIS, que usa o mesmo mapa e devolve a mesma rota (34,08 km e
-42,7 min). Pontos a mais de 2 km de qualquer via são recusados, o que evita "rotas" absurdas para ilhas e mar
-aberto. O Open-Meteo dá a previsão horária de chuva e da chance de chuva, o arquivo ERA5 do último ano (que não
-tem chance) e o fuso de cada coordenada; a chuva de cada hora é a soma da hora anterior, então a taxa é centrada
-30 min antes. Se o Open-Meteo cair, a última previsão em cache segue valendo enquanto cobrir as 12 h da série;
-depois disso a consulta avisa em vez de desenhar chuva inventada.
+**Rota e clima.** O OSRM entrega distância e duração sem trânsito; quando o servidor de demonstração falha, a mesma
+consulta vai ao espelho da FOSSGIS. Pontos a mais de 2 km de qualquer via são recusados (ilhas, mar aberto). O
+Open-Meteo dá a previsão horária de chuva e da chance de chuva e o fuso de cada coordenada; a chuva de cada hora é a
+soma da hora anterior, então a taxa é centrada 30 min antes. Se o Open-Meteo cair, a última previsão em cache segue
+valendo enquanto cobrir as 12 h da série; depois disso a consulta avisa em vez de desenhar chuva inventada.
 
-**Fuso por rota.** Demanda e trânsito seguem o relógio do lugar da corrida, não o do computador. Cada rota
-guarda o fuso da origem, e o gráfico avisa quando ele difere do relógio local. Num dia de horário de verão em que
-a meia-noite não existe, o dia começa no primeiro instante que existe (o Brasil já teve isso e pode voltar a ter).
-
-**Worker.** Uma thread alinhada aos slots de 10 min faz, a cada ciclo (e na hora, quando a consulta traz uma rota
-nova, para ela já entrar nas rotas monitoradas):
-
-1. Observa o estado do mercado do oráculo nas 5 rotas usadas mais recentemente; as sintéticas do bootstrap já têm
-   um ano de histórico e ficam de fora.
-2. Guarda a previsão das próximas 12 h de cada uma, de preço e de tempo, **nos dois aplicativos**.
-3. Consolida as previsões passadas contra o que foi observado: erro médio, cobertura das faixas e perda pinball
-   das últimas 24 h, para preço e tempo, na tabela `Metrics` e na barra de status. A barra só mostra a taxa de
-   acerto a partir de 50 previsões consolidadas e, antes disso, mostra a contagem (com 3 previsões a faixa chegou a
-   marcar 33%).
-4. Retreina a cada 1 h com todo o histórico acumulado (~1,5 min: as 736 mil observações do mercado viram 1,47
-   milhão de linhas de treino, uma por aplicativo).
-
-O LightGBM libera o GIL durante o treino, então a janela continua responsiva. Um erro inesperado vai para o log
-e o ciclo seguinte tenta de novo. A cobertura da barra de status mede poucas dezenas de previsões correlacionadas:
-durante um acidente simulado ela cai por algumas dezenas de minutos (hoje, às 11:50, marcou 46% no preço) e volta.
-
-**Modelo.** Três camadas, cada uma resolvendo um problema diferente:
-
-- **Dois alvos, mesma máquina.** O modelo prevê o preço e o tempo de viagem com a mesma arquitetura: cada um
-  aprende o multiplicador sobre a sua base (tarifa sem dinâmica para o preço, tempo sem trânsito para a viagem),
-  porque árvores não extrapolam distância mas o multiplicador vale para rotas de qualquer tamanho.
-- **Estrutura (LightGBM quantílico).** Atributos: hora local contínua, dia da semana **com feriado valendo como
-  domingo**, distância, duração livre, fração no corredor, chuva e **o aplicativo**, como categoria. Cada
-  observação do mercado vira uma linha de treino por aplicativo, com o preço e a base daquela tarifa, então o
-  modelo aprende de uma vez a dinâmica mais forte da Uber e a mais contida da 99 sem dois modelos separados.
-- **Âncora (preço observado agora + nível do dia).** Numa regressão por horizonte entram o resíduo de agora,
-  cortado em 2,5 desvios; o excesso acima do corte, com coeficiente próprio; e a média encolhida dos resíduos
-  cortados de hoje, que vale só até a meia-noite local. O corte separa o choque (um acidente no corredor, que
-  persiste e se dissipa em ~45 min) do ruído, e impede que o acidente da manhã vire "nível do dia" e encareça a
-  previsão da tarde. A média crua do dia confunde nível com hora do dia; a encolhida não.
-- **Faixa (conformal por horizonte e por regime).** Os offsets de p10 e p90 são calibrados em 20% dos dados,
-  reservados em blocos de 7 dias para que os horizontes que atravessam a meia-noite fiquem dentro da calibração,
-  separados por horizonte e por quantas observações do dia existem (rota nova, rastreada há pouco, rastreada),
-  de modo que a cobertura fique nos 80% nominais.
-
-Ainda no modelo: mais chuva nunca barateia, porque cada quantil é rearranjado sobre uma grade de chuva
-(Chernozhukov et al.) — o LightGBM recusa restrição monotônica com objetivo quantílico. Os três quantis são
-ordenados, e a largura mínima de 1% garante p10 < p50 < p90 em qualquer ponto.
-
-**Oráculo.** O banco guarda o **estado do mercado** de cada instante — excesso de demanda, ruído da oferta e
-minutos de viagem —, e não o preço: o preço de cada aplicativo sai desse estado com a tarifa dele, então trocar de
-aplicativo ou calibrar a tarifa não invalida um ano de histórico nem exige regerar nada. Demanda por picos
-gaussianos na semana local, com feriado seguindo o perfil de domingo; atraso de
-trânsito proporcional à fração na Amaral Peixoto; acidentes em processo de Poisson com dissipação exponencial;
-efeito da chuva saturando por volta de 4 mm/h. O mesmo atraso alonga a viagem e entra na tarifa, então preço e
-tempo são coerentes entre si. Cada um tem a sua variação própria: oferta de motoristas por slot e nível por dia
-no preço, semáforos e fila por slot mais condição do dia (obra, férias, evento) no tempo. Semente fixa: o mesmo
-instante sempre dá o mesmo preço e o mesmo tempo, no desktop e no Android.
-
-**Bootstrap.** Catorze rotas reais da região, de 4 a 186 km e de 0 a 97% no corredor, incluindo rotas longas fora
-dele (Glicério → Macaé, 49 km e 0%; Macaé → Rio, 186 km e 0%) e curtas dentro dele (Unamar → Rio das Ostras, 13 km e
-97%). Com as 5 rotas originais toda rota longa tinha ~62% no corredor, e o modelo aprendeu "longa = congestionada":
-numa rota de 30 km fora do corredor o tempo previsto saía 2,4% alto e a faixa cobria só 60%. Sobre um ano de chuva
-real somam-se 6 tempestades sintéticas por semana: sem elas a chuva real quase nunca traz temporal no horário de
-pico e o modelo errava −11% nesse regime; com elas, erra cerca de 1%. São 736 mil preços, um a cada 10 min.
+**Fuso por rota.** Demanda e trânsito seguem o relógio do lugar da corrida, não o do computador. Cada rota guarda o
+fuso da origem, e o gráfico avisa quando ele difere do relógio local.
 
 ## O que foi medido
 
-Tudo abaixo sai do `test.py` (127 verificações, todas passando), contra o oráculo, em dias e rotas fora do treino
-e **nos dois aplicativos**.
+Tudo abaixo sai do `test.py` (120 verificações, todas passando), contra as médias reais da Uber de 26/09/2026, com
+validação cruzada: o trecho (ou o município inteiro) que é previsto fica fora do ajuste.
 
-**Tarifa e calibração.** Ao longo de 120 dias na rota de referência, a 99 sai de 9,6% a 15,9% abaixo da Uber
-(média 10,7%), mais barata em todo instante, e a diferença cresce com a dinâmica (correlação −0,92 entre o preço
-da Uber e a razão entre os dois); fora do pico a mediana da 99 fica em 0,900 da Uber. O tempo de viagem é
-idêntico nos dois. Na calibração, seis preços informados 12% acima da tabela publicada — em rotas de 1 a 60 km,
-com e sem dinâmica, inclusive abaixo da tarifa mínima — deixam erro residual **abaixo de 0,7%** em todas elas;
-com **um** preço só, a rota informada passa a bater **exatamente** (na janela real, pedido R$ 40,19 e mostrado
-R$ 40,19 no desktop; pedido R$ 44,90 e mostrado R$ 44,90 no Android); um preço absurdo fica preso no limite do
-dobro da tabela e **0** devolve a tabela publicada.
+| Preço médio da UberX por trecho | erro mediano | viés mediano | 90% dos trechos com erro até |
+|---|---|---|---|
+| tabela antiga do app (calibrada em Macaé) | 21,2% | **−21,2%** | 39% |
+| novo, município da tabela | **7,0%** | 0,0% | 19,4% |
+| novo, município sem trecho publicado (só o estado) | 8,5% | −0,1% | 22% |
 
-**Precisão por horizonte** (8 dias futuros, as 14 rotas do bootstrap, âncoras a cada 3 h):
+- **Tempo médio real de viagem** previsto a partir do OSRM: erro mediano de 7,8% em 594 trechos.
+- **Faixa do nível regional**: cobre 80% das médias reais fora do ajuste, o nominal.
+- **Cadeia inteira do app** (município, ritmo, perfil horário e tarifa, como na tela) contra a média real do mês:
+  erro mediano de 5,9% no preço (viés −0,1%) e de 6,9% no tempo.
+- Por estado, o erro do app fica entre 3% e 7% onde há dezenas de trechos (RJ 5,9%, SP 7,1%, RS 5,9%, MG 5,9%, PE
+  4,7%, SC 4,1%, PR 4,1%); a tabela antiga errava 18% no RJ e 34% em SP.
 
-| Preço | agora | 10–30 min | 40–60 min | 1–3 h | 3–6 h | 6–12 h |
+**Rotas de verificação** (preço de agora num sábado às 19 h, nos dois aplicativos, com o município identificado):
+
+| Rota | km | sem trânsito | agora | município | Uber | 99 |
 |---|---|---|---|---|---|---|
-| Uber, sem âncora | 2,5% | 2,3% | 2,3% | 2,4% | 2,4% | 2,4% |
-| Uber, rota rastreada | **0%** | 2,1% | 2,1% | 2,2% | 2,2% | 2,3% |
-| Uber, rota nova (1 observação) | **0%** | 2,3% | 2,3% | 2,3% | 2,3% | 2,4% |
-| 99, sem âncora | 2,6% | 2,3% | 2,4% | 2,4% | 2,4% | 2,4% |
-| 99, rota rastreada | **0%** | 2,2% | 2,2% | 2,3% | 2,3% | 2,3% |
-| 99, rota nova (1 observação) | **0%** | 2,3% | 2,3% | 2,4% | 2,4% | 2,4% |
+| Copacabana → Ipanema (RJ) | 5,1 | 7 min | 12 min | Rio de Janeiro/RJ | R$ 14,70 | R$ 13,23 |
+| Paulista → Ibirapuera (SP) | 5,3 | 13 min | 16 min | São Paulo/SP | R$ 21,24 | R$ 19,11 |
+| Ilha do Governador → Xerém | 34,3 | 39 min | 53 min | Rio de Janeiro/RJ | R$ 69,86 | R$ 62,88 |
+| Rio → Niterói (ponte) | 16,4 | 20 min | 28 min | Rio de Janeiro/RJ | R$ 36,31 | R$ 32,68 |
+| Rio → São Paulo | 431,7 | 5h39 | 6h18 | Rio de Janeiro/RJ | R$ 835,20 | R$ 751,68 |
+| Manaus centro → aeroporto | 15,2 | 20 min | 25 min | média nacional | R$ 30,97 | R$ 27,87 |
 
-| Tempo de viagem (o mesmo nos dois) | agora | 10–30 min | 40–60 min | 1–3 h | 3–6 h | 6–12 h |
-|---|---|---|---|---|---|---|
-| Sem âncora | 3,7% | 3,5% | 3,5% | 3,6% | 3,6% | 3,6% |
-| Rota rastreada | **0%** | 3,3% | 3,3% | 3,4% | 3,5% | 3,5% |
-| Rota nova (1 observação) | **0%** | 3,5% | 3,5% | 3,5% | 3,6% | 3,6% |
+Da Ilha do Governador a Xerém a tabela antiga dava cerca de R$ 55. Como referência real, a média da Uber do Rio para
+Duque de Caxias é R$ 47 em 22 km e 34 min, e a do Rio para Guarulhos é R$ 865 em 419 km, 3,5% acima dos R$ 835 do
+app para São Paulo (os pedágios, que o OSRM público não identifica, ficam só na média).
 
-A cobertura das faixas fica entre 81% e 82% em todos os horizontes, regimes, alvos e aplicativos. O piso de erro é
-a variação do próprio mercado simulado — cerca de 2,0% no preço e 3,2% no tempo — então as duas previsões estão
-perto do limite do que é previsível.
+**Estrutura:** sexta 18 h custa 40% mais e leva 31% mais que a madrugada; feriado de manhã custa 20% menos que uma
+segunda comum; chuva forte no pico encarece 32%; mais chuva nunca barateia nem acelera; a 99 fica a 0,90 da Uber
+em todo instante, com o mesmo tempo de viagem.
 
-**Rotas fora do treino** (6 dias, âncoras a cada 3 h, rota rastreada; os números da 99 não diferem dos da Uber em
-mais de 0,2 ponto):
+**Preço informado:** aparece exato na hora (pedido R$ 85,16, mostrado R$ 85,16) com a faixa estreita; com um preço
+25% acima do esperado, três horas depois sobra 13% (o nível aprendido); um preço a 300 km quase não mexe em outra
+origem; um preço absurdo fica preso no dobro do esperado; 25 preços 10% acima convergem o nível para 1,09.
 
-| Rota | Erro preço | Erro tempo | Viés tempo | Faixa preço | Faixa tempo |
-|---|---|---|---|---|---|
-| 2 km, sem corredor | 2,1% | 3,3% | +0,4% | 81% | 80% |
-| 9 km, 30% no corredor | 2,1% | 3,6% | +0,1% | 82% | 77% |
-| 30 km, sem corredor | 2,2% | 3,5% | +0,6% | 79% | 78% |
-| 30 km, 90% no corredor | 2,7% | 4,1% | −0,3% | 77% | 80% |
-| 100 km, sem corredor | 2,1% | 3,1% | −0,3% | 82% | 83% |
-| 300 km, 30% no corredor | 2,3% | 3,3% | −0,2% | 77% | 81% |
+## Atualizar a tabela
 
-**Acidentes no corredor** (60 dias, 3 rotas com mais de 55% na RJ-106, consultas feitas com o acidente em curso,
-nos dois aplicativos):
+As médias da Uber mudam: pelo IPCA do IBGE, o transporte por aplicativo subiu 57% no Brasil em 24 meses (67% na
+região metropolitana do Rio), com alta forte em dezembro e queda em janeiro. Para renovar:
 
-| Horizonte | Erro tempo | Viés tempo | Faixa tempo | Erro preço | Viés preço | Faixa preço |
-|---|---|---|---|---|---|---|
-| primeira hora | 4,8% | −2,4% | 68% | 2,9% | −1,3% | 69% |
-| 1–3 h | 3,9% | +0,4% | 78% | 2,6% | +0,5% | 76% |
-| 3–12 h | 3,7% | +1,1% | 80% | 2,6% | +0,9% | 76% |
+```bash
+rm Oracle/routes.csv
+python market.py                                  # ~1 h de coleta devagar e o ajuste; imprime a validação
+python test.py                                    # confere a tabela nova contra os dados reais
+cd ../Mobile && ../Desktop/venv/bin/python golden.py && ./gradlew testDebugUnitTest
+```
 
-O começo de um acidente é imprevisível; a âncora com corte segue o choque e o dissipa. Na comparação nos mesmos
-dados com a âncora anterior, a primeira hora tinha viés de −6,4% no tempo e faixa cobrindo 45%, e o resto do dia
-ficava 1,7% caro porque o acidente contaminava o nível do dia.
-
-**Chuva prevista.** A faixa assume que a previsão de chuva acerta. Em 90 dias de previsões reais do Open-Meteo
-(previsão da véspera contra a mais recente), nos slots com chuva a faixa de preço cobre 50% e o erro do preço
-dobra (2,2% → 4,2%); nos slots secos nada muda. Quando a chance de chuva está alta, trate o p90 como otimista.
-
-**Cenários de horário e chuva** (previsão de 1 h à frente contra o que o oráculo cobra, 8 cenários × 2
-aplicativos): erro médio de 2,13% no preço e 2,09% no tempo, com o valor real dentro da faixa em 7 dos 8 cenários
-de cada aplicativo — madrugada, meio da manhã, rush de quarta, rush de sexta seco e com chuva forte, domingo à
-tarde, feriado de 7 de setembro e segunda comum.
-
-**Distância e tempo:** a rota de teste dá 34,1 km e 42,7 min, confirmados pelo espelho da FOSSGIS, que também
-assume a consulta quando o servidor principal está fora do ar; a distância rodoviária fica entre 1 e 3 vezes a
-linha reta; as velocidades médias das rotas testadas vão de 28 a 80 km/h; ponto no mar e ilha sem ligação
-rodoviária são recusados.
-
-**Qualquer rota**, nos dois aplicativos, com fuso certo, série de 73 pontos, faixas abertas e a 99 sempre abaixo
-da Uber com o mesmo tempo de viagem:
-
-| Rota | km | sem trânsito | Uber | 99 |
-|---|---|---|---|---|
-| Copacabana → Ipanema (RJ) | 5,1 | 6 min | R$ 11,61 | R$ 9,43 |
-| Paulista → Ibirapuera (SP) | 5,2 | 11 min | R$ 12,44 | R$ 10,35 |
-| Rio → Niterói (ponte) | 16,3 | 17 min | R$ 28,26 | R$ 24,58 |
-| Rio → São Paulo (431 km) | 431,7 | 5h26 | R$ 627,43 | R$ 569,46 |
-| Manaus centro → aeroporto (fuso `America/Manaus`) | 15,2 | 18 min | R$ 25,62 | R$ 22,52 |
+Entre uma coleta e outra, os preços que você informa ajustam o nível da sua região.
 
 ## Limitações
 
-- **O preço não é o da Uber nem o da 99 de verdade, e nenhum código resolve isso sozinho.** Não existe API
-  pública gratuita de preços (a Uber restringe a de estimativas a parceiros, a 99 não tem), então o app simula o
-  mercado sobre a tabela de tarifas de cada aplicativo. O caminho para ele bater com o app é a calibração:
-  informe o preço real e a tarifa se ajusta: com um preço, a rota informada passa a bater exatamente; com três ou
-  mais, em rotas de tamanhos diferentes, a tabela inteira converge. O que a calibração não alcança é a **dinâmica
-  daquele instante**: se a Uber estiver aplicando um multiplicador que o oráculo não previu, o valor mostrado
-  difere até você informar um preço novo.
-- Não há trânsito em tempo real gratuito: o congestionamento vem do perfil histórico por horário e da fração da
-  rota na Amaral Peixoto, e os acidentes só aparecem depois que o preço observado os mostra.
-- A faixa não inclui o erro da previsão de chuva (ver "Chuva prevista" acima).
-- A localização automática erra quilômetros: onde o BeaconDB conhece as redes Wi-Fi ela chega ao nível da rua,
-  onde não conhece vale a mediana dos provedores de IP (~10 km nesta conexão). Use o mapa ou os lugares já usados
-  para o ponto exato; no Android o GPS resolve.
-- O OSRM público e o espelho da FOSSGIS não têm garantia de disponibilidade. Rotas já consultadas ficam em cache
-  no banco.
+- **A dinâmica do instante não é pública.** A tabela acerta o preço médio de cada região; num instante de dinâmica
+  alta que o perfil horário não previu (show, pane, promoção), o app só fica exato depois que você informa o preço.
+- O trânsito hora a hora é o típico real das metrópoles (TomTom), não o de cada rota; a dinâmica hora a hora é o
+  padrão de demanda da semana, sem fonte pública medida: as médias da Uber são mensais. A barra de status mede o
+  acerto hora a hora com os seus preços.
+- A 99 não publica preços: ela sai da razão típica de 0,90 sobre a UberX até você informar preços da 99.
+- Pedágios não são identificados pelo OSRM público; eles entram só na média dos trechos que os têm.
+- Não há trânsito em tempo real gratuito; a faixa inclui o erro típico do tempo, não um acidente de hoje.
+- A localização automática erra quilômetros sem GPS; use o mapa ou os lugares já usados.
+- O OSRM público, o Nominatim e o Open-Meteo não têm garantia de disponibilidade. Rotas já consultadas ficam em
+  cache no banco, com o município.

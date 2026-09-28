@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -59,6 +60,8 @@ import androidx.core.location.LocationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -96,7 +99,7 @@ class Interface : ComponentActivity() {
         const val LOCATE = 10_000L     // ms de espera, somando todos os provedores, por uma leitura no nivel da rua; sem nenhuma leitura vale a estimativa por ip
         const val FRESH  = 120_000L    // ms de idade maxima da ultima posicao conhecida para valer sem leitura nova
 
-        val STATS = listOf("distance" to "Distância", "corridor" to "Trecho na RJ-106", "duration" to "Tempo sem trânsito", "minutes" to "Tempo com trânsito agora", "rain" to "Chuva agora", "worst" to "Pior trânsito na janela", "peak" to "Pico de preço na janela", "low" to "Menor preço na janela")
+        val STATS = listOf("distance" to "Distância", "surge" to "Dinâmica estimada agora", "duration" to "Tempo sem trânsito", "minutes" to "Tempo com trânsito agora", "rain" to "Chuva agora", "worst" to "Pior trânsito na janela", "peak" to "Pico de preço na janela", "low" to "Menor preço na janela")
     }
 
     val origin      = Search("ORIGEM", "Endereço de partida")
@@ -123,14 +126,12 @@ class Interface : ComponentActivity() {
         Database.setup(this)
 
         lifecycleScope.launch(Dispatchers.IO) {
-            Engine.setup()
-            note = getHint()
-
             try {
-                Model.setup(assets.open("model.json").bufferedReader().use { it.readText() })
+                Engine.setup(this@Interface)
+                note = getHint()
             } catch (err: Exception) {
-                Log.e("Interface", "modelo empacotado ilegivel", err)
-                Worker.status = "Modelo empacotado ilegível: reinstale o app"
+                Log.e("Interface", "tabela de precos empacotada ilegivel", err)
+                Worker.status = "Tabela de preços empacotada ilegível: reinstale o app"
             }
         }
 
@@ -150,7 +151,7 @@ class Interface : ComponentActivity() {
         }
     }
 
-    // OBSERVACAO DAS ROTAS RECENTES A CADA SLOT ENQUANTO O APP ESTA ABERTO, COMO O WORKER DO DESKTOP; SEM MODELO AINDA, TENTA DE NOVO EM 1 S
+    // PREVISAO DAS ROTAS RECENTES A CADA SLOT ENQUANTO O APP ESTA ABERTO, COMO O WORKER DO DESKTOP; SEM A TABELA AINDA, TENTA DE NOVO EM 1 S
     suspend fun handleWorker() {
         while (true) {
             try {
@@ -160,7 +161,7 @@ class Interface : ComponentActivity() {
                 Worker.status = "Erro no ciclo em segundo plano; nova tentativa no próximo slot"
             }
 
-            delay(if (Model.ready()) STEP * 1000 - System.currentTimeMillis() % (STEP * 1000) + Worker.DELAY * 1000 else STATUS)
+            delay(if (Oracle.ready()) STEP * 1000 - System.currentTimeMillis() % (STEP * 1000) + Worker.DELAY * 1000 else STATUS)
         }
     }
 
@@ -259,6 +260,7 @@ class Interface : ComponentActivity() {
 
         origin.set(quote.src!!)
         destination.set(quote.dst!!)
+        note        = getHint(quote.route)
         chart.index = null
         Tracker.start(this, quote.route!!, quote.series!!, company)
 
@@ -268,7 +270,7 @@ class Interface : ComponentActivity() {
     // TROCA DE APLICATIVO: A ROTA NA TELA E RECALCULADA COM A TARIFA E A DINAMICA DO ESCOLHIDO
     fun handleCompany(chosen: String) {
         company = chosen
-        note    = getHint()
+        note    = getHint(tick?.route)
         val current = tick ?: return
 
         lifecycleScope.launch {
@@ -285,37 +287,45 @@ class Interface : ComponentActivity() {
         val value   = (if (',' in typed) typed.replace(".", "").replace(",", ".") else typed).toDoubleOrNull()    // 1.234,56 e 1234.56 valem o mesmo
 
         if (current == null || value == null || value < 0) {
-            message = "Calcule um preço e informe o valor real do aplicativo, como 54,85 (0 apaga a calibração)."
+            message = "Calcule um preço e informe o valor que o aplicativo mostra agora, como 54,85 (0 apaga os seus preços)."
             failed  = true
             return
         }
 
         fare    = ""
-        message = "Calibrando a tarifa…"
+        message = "Registrando o preço real…"
         failed  = false
 
         lifecycleScope.launch {
             val count = withContext(Dispatchers.IO) { Engine.setFare(current.route, chosen, value) }
 
             if (count < 0) {
-                message = "Não foi possível calibrar agora: a previsão desta rota está indisponível."
+                message = "Não foi possível registrar agora: a previsão do tempo desta rota está indisponível."
                 failed  = true
                 return@launch
             }
 
             val series = withContext(Dispatchers.IO) { Engine.get(current.route, company) }
             Tracker.reset(current.route, chosen)
-            note    = getHint()
-            message = if (count > 0) "Tarifa da ${COMPANIES.getValue(chosen)} ajustada a $count preço(s) informado(s)." else "Calibração da ${COMPANIES.getValue(chosen)} apagada: voltou à tabela publicada."
+            note    = getHint(current.route)
+            message = if (count > 0) "Preço da ${COMPANIES.getValue(chosen)} registrado: a previsão parte dele agora e a média da região se ajusta ($count ${if (count == 1) "preço seu" else "preços seus"})." else "Preços informados da ${COMPANIES.getValue(chosen)} apagados: voltou à média real da região."
             if (series != null) Tracker.start(this@Interface, current.route, series, company)
         }
     }
 
-    // ORIGEM DA TARIFA EM USO, SOB O CAMPO DE PRECO REAL
-    fun getHint(): String {
-        val fare  = Oracle.getFare(company)
-        val state = if (fare == Oracle.TARIFFS.getValue(company)) "tabela publicada" else "calibrada em R$ ${getFixed(fare.km, 2)}/km e R$ ${getFixed(fare.minute, 2)}/min"
-        return "Tarifa ${COMPANIES.getValue(company)}: $state"
+    // DE ONDE VEM O PRECO EM USO, SOB O CAMPO DE PRECO REAL: A MEDIA REAL DA REGIAO E QUANTOS PRECOS INFORMADOS POR PERTO AJUSTAM ELA
+    fun getHint(route: Route? = null): String {
+        val table   = Oracle.MARKET ?: return ""
+        val name    = COMPANIES.getValue(company)
+        val updated = LocalDate.parse(table.updated).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+
+        if (route == null) return "$name: médias reais da Uber de $updated em ${table.routes} trechos; informe o preço do app para ajustar"
+
+        val calibration = Oracle.getCalibration(route, company, System.currentTimeMillis() / 1000)
+        val market      = calibration.market.name
+        val base        = if (company == "uber") "média real da UberX em $market" else "UberX de $market × ${getFixed(Oracle.TARIFFS.getValue(company).ratio, 2)}"
+        val seen        = if (calibration.count > 0) "ajustada a ${calibration.count} ${if (calibration.count == 1) "preço seu" else "preços seus"} por perto" else "sem preço seu por perto"
+        return "$name: $base · $seen"
     }
 
     // PONTO ESCOLHIDO NO MAPA OU NA LISTA: VIRA O ENDERECO DO CAMPO
@@ -334,7 +344,7 @@ class Interface : ComponentActivity() {
         Column(Modifier.fillMaxSize().background(COLORS.background).safeDrawingPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Tarifa Dinâmica", color = COLORS.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text("●", color = if (Model.ready()) COLORS.success else COLORS.muted, fontSize = 14.sp)
+                Text("●", color = if (!Oracle.ready()) COLORS.muted else if (status.startsWith("Erro") || status.contains("ilegível")) COLORS.error else COLORS.success, fontSize = 14.sp)
             }
 
             Text("previsão de preço de corrida por aplicativo", color = COLORS.muted, fontSize = 13.sp)
@@ -369,7 +379,7 @@ class Interface : ComponentActivity() {
                 chart.show(current)
             }
 
-            Text("Preços simulados sobre a tarifa de cada aplicativo; informe o preço real do app para calibrar. Endereços (OpenStreetMap), rotas (OSRM) e clima (Open-Meteo) são dados reais.", color = COLORS.muted, fontSize = 11.sp)
+            Text("Preço estimado pelas médias reais da Uber no último mês na região de origem; a 99, pela razão típica entre as duas. Informe o preço que o app mostra para ajustar. Endereços (OpenStreetMap), rotas (OSRM) e clima (Open-Meteo) são dados reais.", color = COLORS.muted, fontSize = 11.sp)
         }
 
         locator?.show()
@@ -388,13 +398,15 @@ class Interface : ComponentActivity() {
         val clock  = { i: Int -> getLocal(series.ts[i], route.tz).format(Chart.HHMM) }
         val (way, change) = Tracker.getChange(route, tick.company, series.price)
         val color  = listOf(COLORS.price, COLORS.text, COLORS.error)[way + 1]
+        val focus  = LocalFocusManager.current
 
+        val free   = Oracle.getFree(route)
         val values = mapOf(
             "distance" to "${getFixed(route.distance, 1)} km",
-            "corridor" to "${getFixed(route.corridor * 100, 0)}%",
-            "duration" to getDuration(route.duration),
-            "minutes"  to "${getDuration(series.minutes)} · ${getDelay(series.minutes - route.duration)}",
-            "rain"     to "${getFixed(series.rain[0], 1)} mm/h · ${getFixed(series.probability[0], 0)}%",
+            "surge"    to "${getFixed(series.surge, 2)}×",
+            "duration" to getDuration(free),
+            "minutes"  to "${getDuration(series.minutes)} · ${getDelay(series.minutes - free)}",
+            "rain"     to "${getFixed(series.rain[0], 1)} mm/h · ${getChance(series.probability[0])}",
             "worst"    to "${getDuration(bands.getValue("m50")[worst])} · ${clock(worst)}",
             "peak"     to "${getMoney(bands.getValue("p50")[peak])} · ${clock(peak)}",
             "low"      to "${getMoney(bands.getValue("p50")[low])} · ${clock(low)}",
@@ -424,11 +436,11 @@ class Interface : ComponentActivity() {
                     textStyle       = TextStyle(color = COLORS.text, fontSize = 14.sp),
                     shape           = RoundedCornerShape(8.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { handleFare() }),
+                    keyboardActions = KeyboardActions(onDone = { focus.clearFocus(); handleFare() }),
                     colors          = OutlinedTextFieldDefaults.colors(focusedContainerColor = COLORS.input, unfocusedContainerColor = COLORS.input, focusedBorderColor = COLORS.button, unfocusedBorderColor = COLORS.border, cursorColor = COLORS.text, focusedTextColor = COLORS.text, unfocusedTextColor = COLORS.text),
                 )
 
-                OutlinedButton(onClick = ::handleFare, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, COLORS.border), colors = ButtonDefaults.outlinedButtonColors(containerColor = COLORS.input, contentColor = COLORS.text)) {
+                OutlinedButton(onClick = { focus.clearFocus(); handleFare() }, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, COLORS.border), colors = ButtonDefaults.outlinedButtonColors(containerColor = COLORS.input, contentColor = COLORS.text)) {
                     Text("Calibrar", fontWeight = FontWeight.Bold)
                 }
             }

@@ -1,46 +1,38 @@
-import os, shutil, tempfile, logging
-import bootstrap
+import os, json, math, shutil, tempfile, logging
 import time as clock
 import numpy as np
 import pandas as pd
-import Model.index
 import Worker.index
 from datetime import date, timedelta
 from Api.index import api
 from Database.index import database
 from Engine.index import engine
-from Model.index import model
+from Market.index import WEEK, getFrame, getTable, getWeek
 import Oracle.index as oracle
-from Oracle.index import FARES, TARIFFS, getMarket, getRandom, getSurge, getTariff
+from Oracle.index import TARIFFS, getCalibration, getFree, getOrigin, getState, getSurge, getTariff
+from Model.index import getNormal, getQuantile
 from Utils.functions import getClock, getDelay, getDistance, getDuration, getHolidays, getMoney, getSpan
 from Utils.sound import getTone
-from Utils.variables import COMPANIES, ORIGIN, DESTINATION, TZ, STEP, HORIZON
+from Utils.variables import COMPANIES, ORIGIN, DESTINATION, TZ, STEP, HORIZON, MARKET_PATH, ROUTES_PATH
 from Worker.index import worker
 
 
-FOLDER   = tempfile.mkdtemp(prefix='tarifa-')    # banco e modelo isolados dos dados do app
+FOLDER   = tempfile.mkdtemp(prefix='tarifa-')    # banco isolado dos dados do app
 LEADS    = HORIZON // STEP + 1
+Z90      = 1.2815515655446004                     # quantil 90% da normal padrao
 failures = []
 
-# (nome, instante da ancora, chuva mm/h, faixa plausivel do preco uma hora depois) na rota de referencia
-SCENARIOS = [
-    ('madrugada de quarta, seco',     '2026-09-09 02:00', 0.0, (50, 58)),
-    ('meio da manhã de quarta, seco', '2026-09-09 09:30', 0.0, (50, 62)),
-    ('rush de quarta, seco',          '2026-09-09 16:50', 0.0, (60, 80)),
-    ('rush de sexta, seco',           '2026-09-11 17:00', 0.0, (62, 84)),
-    ('rush de sexta, chuva forte',    '2026-09-11 17:00', 8.0, (80, 104)),
-    ('domingo à tarde, seco',         '2026-09-13 16:00', 0.0, (54, 74)),
-    ('feriado 7 de setembro, manhã',  '2026-09-07 06:00', 0.0, (50, 62)),
-    ('segunda comum, manhã',          '2026-09-14 06:00', 0.0, (54, 76)),
-]
+# rota de referencia do enunciado (macae -> rio das ostras) com o municipio de origem que o nominatim devolve
+REFERENCE = {'id': 1, 'o_lat': -22.34137, 'o_lon': -41.75567, 'distance': 34.0809, 'duration': 42.7283, 'tz': TZ, 'city': 'Macaé', 'uf': 'RJ'}
 
-# rotas reais de varias cidades e fusos para conferir distancia, tempo e preco em qualquer lugar do pais
+# rotas reais de varias cidades e fusos, com o municipio de origem esperado
 MATRIX = [
-    ('Copacabana → Ipanema (RJ)',   {'label': 'Copacabana', 'lat': -22.9711, 'lon': -43.1822}, {'label': 'Ipanema', 'lat': -22.9838, 'lon': -43.2096}, 'America/Sao_Paulo'),
-    ('Paulista → Ibirapuera (SP)',  {'label': 'Avenida Paulista', 'lat': -23.5614, 'lon': -46.6559}, {'label': 'Ibirapuera', 'lat': -23.5874, 'lon': -46.6576}, 'America/Sao_Paulo'),
-    ('Rio → Niterói (ponte)',       {'label': 'Centro do Rio', 'lat': -22.9035, 'lon': -43.2096}, {'label': 'Centro de Niterói', 'lat': -22.8940, 'lon': -43.1150}, 'America/Sao_Paulo'),
-    ('Rio → São Paulo (430 km)',    {'label': 'Centro do Rio', 'lat': -22.9068, 'lon': -43.1729}, {'label': 'Centro de São Paulo', 'lat': -23.5505, 'lon': -46.6333}, 'America/Sao_Paulo'),
-    ('Manaus centro → aeroporto',   {'label': 'Centro de Manaus', 'lat': -3.1316, 'lon': -60.0233}, {'label': 'Aeroporto de Manaus', 'lat': -3.0386, 'lon': -60.0497}, 'America/Manaus'),
+    ('Copacabana → Ipanema (RJ)',   {'label': 'Copacabana', 'lat': -22.9711, 'lon': -43.1822}, {'label': 'Ipanema', 'lat': -22.9838, 'lon': -43.2096}, 'America/Sao_Paulo', 'Rio de Janeiro/RJ'),
+    ('Paulista → Ibirapuera (SP)',  {'label': 'Avenida Paulista', 'lat': -23.5614, 'lon': -46.6559}, {'label': 'Ibirapuera', 'lat': -23.5874, 'lon': -46.6576}, 'America/Sao_Paulo', 'São Paulo/SP'),
+    ('Ilha do Governador → Xerém',  {'label': 'Moneró, Rio de Janeiro', 'lat': -22.79659, 'lon': -43.19412}, {'label': 'Xerém, Duque de Caxias', 'lat': -22.6557, 'lon': -43.30262}, 'America/Sao_Paulo', 'Rio de Janeiro/RJ'),
+    ('Rio → Niterói (ponte)',       {'label': 'Centro do Rio', 'lat': -22.9035, 'lon': -43.2096}, {'label': 'Centro de Niterói', 'lat': -22.8940, 'lon': -43.1150}, 'America/Sao_Paulo', 'Rio de Janeiro/RJ'),
+    ('Rio → São Paulo (430 km)',    {'label': 'Centro do Rio', 'lat': -22.9068, 'lon': -43.1729}, {'label': 'Centro de São Paulo', 'lat': -23.5505, 'lon': -46.6333}, 'America/Sao_Paulo', 'Rio de Janeiro/RJ'),
+    ('Manaus centro → aeroporto',   {'label': 'Centro de Manaus', 'lat': -3.1316, 'lon': -60.0233}, {'label': 'Aeroporto de Manaus', 'lat': -3.0386, 'lon': -60.0497}, 'America/Manaus', 'média nacional'),    # a amostra nao tem trecho do amazonas
 ]
 
 
@@ -54,26 +46,35 @@ def check(name, ok, detail=''):
 def getTs(text, tz=TZ):
     return int(pd.Timestamp(text, tz=tz).timestamp())
 
-# PREVISAO FORCADA COM CHUVA CONSTANTE, PARA TESTAR CENARIOS SEM DEPENDER DO TEMPO REAL
-def getWeather(start, mm):
-    ts = np.arange(start - 86400, start + 2 * 86400, STEP)
-    return pd.DataFrame({'ts': ts, 'rain': np.full(len(ts), mm), 'probability': np.full(len(ts), 90.0 if mm else 0.0)})
+# PREVISAO FORCADA COM CHUVA E CHANCE CONSTANTES, PARA TESTAR CENARIOS SEM DEPENDER DO TEMPO REAL
+def getWeather(start, mm, chance=None):
+    ts = np.arange(start - 86400, start + 2 * 86400, 3600)
+    return pd.DataFrame({'ts': ts, 'rain': np.full(len(ts), mm), 'probability': np.full(len(ts), (90.0 if mm else 0.0) if chance is None else chance)})
 
-# SERIE DO ENGINE PARA UMA ROTA EM UM INSTANTE E CHUVA FORCADOS
-def getSeries(route, ts, mm=0.0, company='uber'):
-    engine.getWeather = lambda lat, lon: getWeather(ts, mm)
+# SERIE DO ENGINE PARA UMA ROTA EM UM INSTANTE, CHUVA E CHANCE FORCADOS
+def getSeries(route, ts, mm=0.0, company='uber', chance=None):
+    engine.getWeather = lambda lat, lon: getWeather(ts, mm, chance)
 
     try:
         return engine.get(route, company, ts)
     finally:
         del engine.getWeather
 
-# LINHAS DE PRECOS REAIS INFORMADOS PELO USUARIO, COM O PRECO DA TABELA EM USO MULTIPLICADO PELO DESVIO PEDIDO
-def getFares(company, rides, off):
-    rows = pd.DataFrame(rides, columns=['distance', 'minutes', 'surge'])
-    rows['company']  = company
-    rows['observed'] = [getTariff(d, m, s, company) * off for d, m, s in rides]
-    return rows
+# PRECO INFORMADO NUM INSTANTE, COM O CLIMA FORCADO
+def setFare(route, company, observed, ts, mm=0.0):
+    engine.getWeather = lambda lat, lon: getWeather(ts, mm)
+
+    try:
+        return engine.setFare(route, company, observed, ts)
+    finally:
+        del engine.getWeather
+
+# PRECO MEDIO DO MES QUE O APP DA A UM TRECHO PUBLICADO PELA UBER: A SEMANA INTEIRA EM SLOTS DE 10 MIN, PONDERADA PELO VOLUME DE VIAGENS, NA ROTA QUE O OSRM TRACARIA
+def getMonthly(row):
+    route  = {'o_lat': row.lat, 'o_lon': row.lon, 'city': row.src, 'uf': row.uf, 'distance': row.km, 'duration': row.o_min * row.km / row.o_km, 'tz': TZ}
+    ts     = getTs('2026-09-14') + WEEK
+    excess, _, minutes = getState(route, ts, np.zeros(len(ts)))
+    return float(getTariff(getOrigin(route)['level'], route['distance'], minutes, excess) @ getWeek()[0]), float(minutes @ getWeek()[0])
 
 def wait(app, condition, timeout):
     start = clock.time()
@@ -103,13 +104,17 @@ def testUtils():
     check('tempo de viagem em minutos até 1 h e em horas depois, sem repetir a unidade na faixa', [getDuration(47.5), getDuration(59.6), getDuration(125.2), getDelay(-2.6), getDelay(65), getSpan(40.2, 45.4), getSpan(55, 65), getSpan(65, 80)] == ['48 min', '1h00', '2h05', '-3 min', '+1h05', '40 a 45 min', '55 min a 1h05', '1h05 a 1h20'])
     check('alertas sonoros gerados nos dois tons', all(len(getTone(kind)) > 20000 for kind in ('good', 'bad')))
 
-# SERVICOS ABERTOS: AUTOCOMPLETE, GEOCODIFICACAO, ROTA, FUSO, LOCALIZACAO E FALHA DE REDE SEM EXCECAO
+# SERVICOS ABERTOS: AUTOCOMPLETE, GEOCODIFICACAO, MUNICIPIO, FUSO, LOCALIZACAO E FALHA DE REDE SEM EXCECAO
 def testApi():
     places = api.search('Rua Professor Antônio Ava')
     check('autocomplete casa o prefixo da rua', bool(places) and 'Avarez Parada' in places[0]['label'], places[0]['label'] if places else places)
     check('autocomplete só devolve lugares no Brasil', all(-34 < p['lat'] < 6 and -74 < p['lon'] < -34 for p in api.search('Teatro Mun') or [{'lat': 99, 'lon': 0}]))
     check('texto livre é geocodificado', api.geocode('Praia de Costazul, Rio das Ostras') is not None)
     check('fusos por coordenada', (api.getZone(-22.34, -41.75), api.getZone(-3.13, -60.02), api.getZone(-9.97, -67.81)) == ('America/Sao_Paulo', 'America/Manaus', 'America/Rio_Branco'))
+
+    cities = [api.getCity(lat, lon) for lat, lon in ((-22.79659, -43.19412), (-22.6557, -43.30262), (-22.40, -42.10), (-23.5614, -46.6559))]
+    check('município de origem pela fronteira do OSM: ilha no Rio, distrito e zona rural no município certo', [f"{c['city']}/{c['uf']}" if c else None for c in cities] == ['Rio de Janeiro/RJ', 'Duque de Caxias/RJ', 'Macaé/RJ', 'São Paulo/SP'], cities)
+    check('ponto no mar não tem município', api.getCity(-23.5, -40.0) is None)
 
     address, beacon = api.getAddress(), api.getBeacon()
     place = api.locate()
@@ -126,15 +131,14 @@ def testApi():
 
 # DISTANCIA E TEMPO: OSRM CONFERIDO CONTRA LINHA RETA, CONTRA OUTRO SERVIDOR E CONTRA PONTOS SEM ACESSO DE CARRO
 def testDistance():
-    route = api.getRoute(ORIGIN, DESTINATION)
+    route    = api.getRoute(ORIGIN, DESTINATION)
     straight = getDistance(ORIGIN, DESTINATION)
-    check('rota de referência: 34 km, 43 min e 62% na RJ-106', route is not None and abs(route['distance'] - 34.08) < 1 and abs(route['duration'] - 42.7) < 3 and 0.55 < route['corridor'] < 0.70, route)
+    check('rota de referência: 34 km e 43 min sem trânsito', route is not None and abs(route['distance'] - 34.08) < 1 and abs(route['duration'] - 42.7) < 3, route)
     check('distância rodoviária maior que a linha reta e no máximo o triplo', straight < route['distance'] < 3 * straight, f"reta {straight:.1f} km, estrada {route['distance']:.1f} km")
 
     other = api.get('https://routing.openstreetmap.de/routed-car/route/v1/driving/' + f"{ORIGIN['lon']},{ORIGIN['lat']};{DESTINATION['lon']},{DESTINATION['lat']}", {'overview': 'false'})
     check('segundo servidor OSRM confirma distância e tempo', other is not None and abs(other['routes'][0]['distance'] / 1000 - route['distance']) < 0.5 and abs(other['routes'][0]['duration'] / 60 - route['duration']) < 2)
     check('ponto no mar e ilha sem estrada não viram rota', api.getRoute({'lat': -3.8547, 'lon': -32.4247}, {'lat': -8.0476, 'lon': -34.8770}) is None and api.getRoute({'lat': -22.60, 'lon': -41.60}, {'lat': -22.37, 'lon': -41.78}) is None)
-    check('avenida homônima em Niterói não conta como corredor', api.getRoute({'lat': -22.8935, 'lon': -43.1234}, {'lat': -22.9026, 'lon': -43.1076})['corridor'] == 0)
 
     primary  = api.OSRM
     api.OSRM = ('https://servidor.invalido/route/v1/driving/', primary[1])
@@ -142,242 +146,110 @@ def testDistance():
     api.OSRM = primary
     check('OSRM principal fora do ar cai para o espelho da FOSSGIS com a mesma rota', fallback is not None and abs(fallback['distance'] - route['distance']) < 0.5, fallback)
 
-# PRIMEIRO BOOT ISOLADO: HISTORICO SINTETICO COM FUSO, TREINO, CALIBRACAO E RECARGA DO MODELO SALVO
-def testBootstrap():
-    database.path = os.path.join(FOLDER, 'surge.db')
-    model.path    = os.path.join(FOLDER, 'model.json')
-    start = clock.time()
-    check('primeiro boot: bootstrap + treino', worker.setup() and model.ready(), f'{clock.time() - start:.0f} s')
+# TABELA CONTRA A REALIDADE: VALIDACAO CRUZADA NAS MEDIAS REAIS DA UBERX, TABELA REPRODUZIVEL E A CADEIA INTEIRA DO APP REPRODUZINDO AS MEDIAS
+def testMarket():
+    df                 = getFrame(ROUTES_PATH)
+    market, validation = getTable(df)
+    saved              = json.load(open(MARKET_PATH, encoding='utf-8'))
+    same               = {key: value for key, value in market.items() if key != 'updated'} == {key: value for key, value in saved.items() if key != 'updated'}
+    check(f"tabela do app reproduzida a partir dos {len(df)} trechos reais guardados", same, f"{df['src_key'].nunique()} municípios em {df['uf'].nunique()} estados")
 
-    routes = database.get('SELECT * FROM Routes ORDER BY id').to_dict('records')
-    counts = database.get('SELECT route_id, COUNT(*) AS n FROM Prices GROUP BY route_id')
-    check(f'{len(bootstrap.ROUTES)} rotas reais com fuso e um ano de preços e tempos a cada 10 min', len(routes) == len(bootstrap.ROUTES) and all(r['tz'] == TZ for r in routes) and (counts['n'] >= 365 * 144).all() and database.get('SELECT MIN(minutes) AS m FROM Prices')['m'][0] > 0, counts['n'].tolist())
-    check('rotas de 4 a 186 km e de 0 a 97% no corredor, com rota longa fora dele e curta dentro dele', min(r['distance'] for r in routes) < 5 and max(r['distance'] for r in routes) > 150 and any(r['distance'] > 30 and r['corridor'] < 0.1 for r in routes) and any(r['distance'] < 15 and r['corridor'] > 0.9 for r in routes), [(round(r['distance']), round(r['corridor'], 2)) for r in routes])
-    check('erro na calibração abaixo de 2,5% no preço e 4,5% no tempo', max(model.metrics['price']['mape']) < 0.025 and max(model.metrics['minutes']['mape']) < 0.045, f"preço até {max(model.metrics['price']['mape']):.2%}, tempo até {max(model.metrics['minutes']['mape']):.2%}")
-    check('setup repetido não retreina', worker.setup() and model.version == 1)
-    check('rotas do bootstrap não aparecem como lugares já usados', engine.getPlaces() == [], engine.getPlaces())
+    old     = (1 + np.maximum(7.5, 2.5 + 1.2076 * df['km'] + 0.22 * df['min'])) / df['uberx'] - 1
+    route   = np.exp(validation['rota']['price']) - 1
+    city    = np.exp(validation['cidade']['price']) - 1
+    pace    = np.exp(np.abs(validation['rota']['pace'][df['match']])) - 1
+    inside  = np.abs(validation['rota']['price']) <= Z90 * market['sigma']['city']
+    check('tabela antiga do app ficava muito abaixo da Uber real', old.median() < -0.15, f'viés mediano {old.median():+.1%}, erro mediano {old.abs().median():.1%}')
+    check('rota nova num município conhecido: erro mediano abaixo de 8% e sem viés', route.abs().median() < 0.08 and abs(route.median()) < 0.02, f'erro {route.abs().median():.1%}, viés {route.median():+.1%}, p90 {route.abs().quantile(0.9):.1%}')
+    check('município sem trecho publicado (só o estado): erro mediano abaixo de 12%', city.abs().median() < 0.12 and abs(city.median()) < 0.04, f'erro {city.abs().median():.1%}, viés {city.median():+.1%}')
+    check('tempo médio real de viagem previsto pelo OSRM com erro mediano abaixo de 10%', pace.median() < 0.10, f'erro {pace.median():.1%} em {int(df["match"].sum())} trechos')
+    check('faixa do nível regional cobre 80% das médias reais fora do ajuste', 0.72 <= inside.mean() <= 0.88, f'{inside.mean():.0%}')
 
-    copy = type(model)()
-    copy.path = os.path.join(FOLDER, 'corrompido.json')
+    oracle.load()
+    rows    = df[df['o_km'].notna()]
+    monthly = np.array([getMonthly(row) for row in rows.itertuples()])
+    error   = monthly[:, 0] / rows['uberx'].to_numpy() - 1
+    minutes = monthly[:, 1] / rows['min'].to_numpy() - 1
+    check('cadeia do app (município, ritmo, perfil horário e tarifa) reproduz a média real do mês', np.median(np.abs(error)) < 0.07 and abs(np.median(error)) < 0.03, f'erro {np.median(np.abs(error)):.1%}, viés {np.median(error):+.1%} no preço; erro {np.median(np.abs(minutes)):.1%} no tempo')
+    return {'antiga': old, 'rota': route, 'cidade': city, 'app': error, 'tempo': minutes, 'uf': df['uf']}
 
-    with open(copy.path, 'w') as file:
-        file.write('{"boosters": ')
+# MERCADO ESPERADO: PICO MAIS CARO E LENTO QUE A MADRUGADA, CHUVA NUNCA BARATEIA, FERIADO COMO DOMINGO, 99 ABAIXO DA UBER E O MESMO TEMPO NOS DOIS
+def testOracle():
+    route = REFERENCE
+    level = getOrigin(route)['level']
+    price = lambda ts, mm=0.0, company='uber': float(getTariff(level, route['distance'], getState(route, [ts], [mm])[2], getState(route, [ts], [mm])[0], company)[0])
+    time  = lambda ts, mm=0.0: float(getState(route, [ts], [mm])[2][0])
 
-    check('modelo salvo corrompido é recusado sem exceção', copy.setup() is False)
-    return routes
+    check('município de origem conhecido usa o nível dele', getOrigin(route)['market'] == 'Macaé/RJ' and getOrigin({**route, 'city': '', 'uf': ''})['market'].startswith('Macaé/RJ e arredores'), getOrigin({**route, 'city': 'Carapebus', 'uf': 'RJ'})['market'])
+    check('sexta 18 h mais cara e mais lenta que a madrugada', price(getTs('2026-09-11 18:00')) > 1.25 * price(getTs('2026-09-10 03:00')) and time(getTs('2026-09-11 18:00')) > 1.2 * time(getTs('2026-09-10 03:00')), f"{getMoney(price(getTs('2026-09-11 18:00')))} x {getMoney(price(getTs('2026-09-10 03:00')))}")
+    check('feriado de manhã custa menos que segunda comum', price(getTs('2026-09-07 07:30')) < 0.9 * price(getTs('2026-09-14 07:30')), f"{getMoney(price(getTs('2026-09-07 07:30')))} x {getMoney(price(getTs('2026-09-14 07:30')))}")
 
-# ORACULO: PRECO NORMAL NA FAIXA PEDIDA, PICO COM CHUVA, FERIADO MAIS BARATO, TEMPO DE VIAGEM COERENTE E DETERMINISMO
-def testOracle(route):
-    ts = np.arange(getTs('2025-09-15'), getTs('2025-09-15') + 364 * 86400, STEP)
-    weekday, hour, _ = getClock(ts, TZ)
-    normal = (weekday < 5) & (hour >= 9) & (hour < 16) & ((hour < 12) | (hour >= 13))
-    price, minutes = getMarket(route, ts[normal], np.zeros(normal.sum()))
-    median = float(np.median(price))
-    check('preço normal da Uber (dia útil 9-16 h, seco) entre R$ 54,67 e R$ 55,00', 54.67 <= median <= 55.00, getMoney(median))
-    check('tempo fora do pico fica perto do tempo sem trânsito', abs(np.median(minutes) / route['duration'] - 1) < 0.08, f"{np.median(minutes):.1f} min x {route['duration']:.1f} min livre")
+    rains = [(price(getTs('2026-09-09 10:30'), mm), time(getTs('2026-09-09 10:30'), mm)) for mm in (0, 1, 3, 6, 10, 30)]
+    check('mais chuva nunca barateia nem acelera', bool(np.all(np.diff(rains, axis=0) >= 0)), [round(p, 2) for p, _ in rains])
+    check('sem chuva a madrugada fica no tempo sem trânsito', abs(time(getTs('2026-09-10 03:30')) / getFree(route) - 1) < 0.02, f"{time(getTs('2026-09-10 03:30')):.1f} x {getFree(route):.1f} min")
 
-    storm, slow = getMarket(route, [getTs('2026-09-11 18:00')], [8.0])
-    check('sexta 18 h com chuva forte chega a R$ 90 e alonga muito a viagem', storm[0] >= 88 and slow[0] >= 1.4 * route['duration'], f'{getMoney(storm[0])} e {slow[0]:.0f} min')
-
-    holiday, common = getMarket(route, [getTs('2026-09-07 07:00'), getTs('2026-09-14 07:00')], [0, 0])[0]
-    check('feriado de manhã custa bem menos que segunda comum', common - holiday > 5, f'{getMoney(holiday)} x {getMoney(common)}')
-
-    rush, calm = getMarket(route, [getTs('2026-09-09 17:50'), getTs('2026-09-09 10:30')], [0, 0])[1]
-    check('rush leva bem mais tempo que o meio da manhã', rush > calm * 1.3, f'{rush:.0f} min x {calm:.0f} min')
-
-    rains = getMarket(route, [getTs('2026-09-09 10:30')] * 5, [0, 1, 3, 6, 10])
-    check('no oráculo mais chuva nunca barateia nem acelera', bool(np.all(np.diff(rains[0]) >= 0) and np.all(np.diff(rains[1]) >= 0)), rains[1])
-    check('mesmo instante, mesmo preço e mesmo tempo', all(np.array_equal(a, b) for a, b in zip(getMarket(route, ts[:300], np.zeros(300)), getMarket(route, ts[:300], np.zeros(300)))))
+    ts     = np.arange(getTs('2026-09-14'), getTs('2026-09-21'), STEP)
+    excess, _, minutes = getState(route, ts, np.zeros(len(ts)))
+    prices = {company: getTariff(level, route['distance'], minutes, excess, company) for company in COMPANIES}
+    ratio  = prices['99'] / prices['uber']
+    check('99 abaixo da Uber em todo instante, na razão típica das comparações públicas', bool((ratio < 1).all()) and abs(ratio.mean() - TARIFFS['99']['ratio']) < 0.01, f'{ratio.min():.3f} a {ratio.max():.3f}')
+    check('dinâmica entre 1 e o teto do aplicativo', bool((getSurge(excess) >= 1).all() and (getSurge(np.full(3, 9.0)) == TARIFFS['uber']['cap']).all()))
+    check('mesmo instante, mesmo preço e mesmo tempo', np.array_equal(getState(route, ts[:300], np.zeros(300))[2], getState(route, ts[:300], np.zeros(300))[2]))
 
     gap = np.arange(getTs('2018-11-03 12:00'), getTs('2018-11-05 12:00'), STEP)
-    check('dia sem meia-noite (horário de verão de 2018) não quebra o oráculo', len(getMarket(route, gap, np.zeros(len(gap)))[0]) == len(gap))
+    check('dia sem meia-noite (horário de verão de 2018) não quebra o mercado', len(getState(route, gap, np.zeros(len(gap)))[2]) == len(gap))
 
-# TARIFA DE CADA APLICATIVO: A TABELA PUBLICADA, A RELACAO ENTRE OS DOIS, O PISO DA CORRIDA CURTA E O AJUSTE AOS PRECOS REAIS INFORMADOS
-def testTariff(route):
-    check('tarifa sem dinâmica é a fórmula da plataforma', abs(getTariff(10.0, 20.0, 1.0, 'uber') - (1.00 + 2.50 + 1.2076 * 10 + 0.22 * 20)) < 1e-9, getTariff(10.0, 20.0, 1.0, 'uber'))
-    check('tarifa mínima vale na corrida curta e a dinâmica multiplica só a corrida', getTariff(0.5, 1.0, 1.0, 'uber') == 1.00 + 7.50 and getTariff(0.5, 1.0, 2.0, 'uber') == 1.00 + 15.00)
+# FAIXAS: ORDENADAS, MISTURA DE CHUVA CORRETA E MONOTONA, PRECO INFORMADO EXATO NA HORA, DINAMICA QUE SE DISSIPA, NIVEL QUE FICA E LIMITES CONTRA ERRO DE DIGITACAO
+def testModel():
+    z = np.linspace(-6, 6, 241)
+    check('normal acumulada com erro abaixo de 2e-7', float(np.max(np.abs(getNormal(z) - [0.5 * math.erfc(-v / math.sqrt(2)) for v in z]))) < 2e-7)
+    q = getQuantile(0.9, np.array([0.0, 0.4]), [np.array([0.0, 0.0]), np.array([0.0, 3.0])], [np.array([1.0, 1.0]), np.array([1.0, 1.0])])
+    check('quantil da mistura: sem chuva é o da normal, com chuva sobe', abs(q[0] - Z90) < 1e-5 and q[1] > Z90 + 1, q.round(4))
 
-    ts = np.arange(getTs('2025-09-15'), getTs('2025-09-15') + 120 * 86400, STEP)
-    rng  = np.random.default_rng(5)
-    rain = np.repeat(np.where(rng.random(len(ts) // 6 + 1) < 0.15, rng.exponential(3.0, len(ts) // 6 + 1), 0.0), 6)[:len(ts)]
-    prices = {company: getMarket(route, ts, rain, company)[0] for company in COMPANIES}
-    times  = {company: getMarket(route, ts, rain, company)[1] for company in COMPANIES}
-    ratio  = prices['99'] / prices['uber']
-    check('99 sai mais barata que a Uber em todo instante, entre 8% e 22% abaixo', bool((ratio < 1).all()) and 0.78 <= ratio.min() and ratio.max() <= 0.92, f'de {1 - ratio.max():.1%} a {1 - ratio.min():.1%} abaixo, média {1 - ratio.mean():.1%}')
-    check('a diferença entre os dois cresce com a dinâmica', float(np.corrcoef(prices['uber'], ratio)[0, 1]) < -0.5, f'correlação {np.corrcoef(prices["uber"], ratio)[0, 1]:.2f}')
-    check('o tempo de viagem é do mercado e não muda com o aplicativo', np.array_equal(times['uber'], times['99']))
-
-    weekday, hour, _ = getClock(ts, TZ)
-    normal = (weekday < 5) & (hour >= 9) & (hour < 16) & ((hour < 12) | (hour >= 13))
-    level  = float(np.median(prices['99'][normal]) / np.median(prices['uber'][normal]))
-    check('99 fica cerca de 10% abaixo da Uber fora do pico, como o mercado mostra', 0.88 <= level <= 0.92, f'{getMoney(np.median(prices["99"][normal]))} x {getMoney(np.median(prices["uber"][normal]))} ({level:.3f})')
-
-    rides  = [(34.08, 45.0, 1.0), (12.0, 20.0, 1.1), (5.0, 12.0, 1.0), (60.0, 70.0, 1.0), (2.0, 6.0, 1.2), (1.0, 3.0, 1.0)]
-    rows   = getFares('uber', rides, 1.12)
-    oracle.update(rows)
-    errors = [abs(getTariff(d, m, s, 'uber') / observed - 1) for (d, m, s), observed in zip(rides, rows['observed'])]
-    check('seis preços reais 12% acima levam a tarifa da Uber até eles, com erro abaixo de 1%', max(errors) < 0.01 and FARES['99'] == TARIFFS['99'], f'erro máximo {max(errors):.2%}, tarifa da 99 intocada')
-
-    oracle.update(rows.iloc[:0])
-    single = getFares('uber', rides[:1], 0.93)
-    oracle.update(single)
-    check('um preço real só já acerta em cheio a rota dele', abs(getTariff(*rides[0], 'uber') / single['observed'][0] - 1) < 1e-6, getMoney(getTariff(*rides[0], 'uber')))
-
-    oracle.update(rows.iloc[:0])
-    oracle.update(getFares('uber', rides[:1], 9.0))
-    check('preço absurdo não tira a tarifa da faixa plausível', all(FARES['uber'][term] <= 2 * TARIFFS['uber'][term] for term in ('base', 'km', 'minute')), {key: round(value, 3) for key, value in FARES['uber'].items()})
-
-    oracle.update(rows.iloc[:0])
-    check('sem preço informado a tarifa volta à tabela publicada', FARES == TARIFFS, FARES['uber'])
-
-# CENARIOS DE HORARIO, CHUVA E FERIADO NOS DOIS APLICATIVOS: A PREVISAO DE UMA HORA A FRENTE, DE PRECO E DE TEMPO, CONTRA O QUE O ORACULO COBRA
-def testScenarios(route):
-    rows = []
+    start = getTs('2026-09-11 16:00')
+    dry   = getSeries(REFERENCE, start, 0.0)
+    wet   = getSeries(REFERENCE, start, 8.0)
+    check('série de 73 pontos com p10 < p50 < p90 e m10 < m50 < m90', len(dry) == LEADS and bool(((dry['p10'] < dry['p50']) & (dry['p50'] < dry['p90']) & (dry['m10'] < dry['m50']) & (dry['m50'] < dry['m90'])).all()))
+    check('chuva forte encarece o pico e alonga a viagem', wet['p50'].max() > 1.15 * dry['p50'].max() and wet['m50'].max() > 1.1 * dry['m50'].max(), f"{getMoney(dry['p50'].max())} x {getMoney(wet['p50'].max())}")
+    check('sem chuva nenhum salto de 10 min passa de 6%', float((np.abs(np.diff(dry['p50'].to_numpy())) / dry['p50'].to_numpy()[:-1]).max()) <= 0.06)
+    blank = getSeries(REFERENCE, start, 0.3, chance=np.nan)
+    check('sem chance de chuva publicada as faixas continuam válidas e ordenadas', bool(np.isfinite(blank[['p10', 'p50', 'p90', 'm10', 'm50', 'm90']].to_numpy()).all() and (blank['p10'] < blank['p50']).all() and (blank['p50'] < blank['p90']).all()))
 
     for company in COMPANIES:
-        for name, text, mm, (lo, hi) in SCENARIOS:
-            anchor = getTs(text)
-            df     = getSeries(route, anchor, mm, company)
-            row    = df[df['ts'] == anchor + 3600].iloc[0]
-            price, minutes = [value[0] for value in getMarket(route, [anchor + 3600], [mm], company)]
-            bounds = (lo, hi) if company == 'uber' else (lo * 0.80, hi * 0.95)    # a faixa plausivel foi medida na uber; a 99 cobra de 8% a 22% menos
-            rows.append({'app': COMPANIES[company], 'cenário': name, 'previsto': row['p50'], 'real': price, 'erro': abs(row['p50'] / price - 1), 'dentro': bounds[0] <= price <= bounds[1], 'na faixa': row['p10'] <= price <= row['p90'],
-                         'tempo': row['m50'], 'tempo real': minutes, 'erro tempo': abs(row['m50'] / minutes - 1), 'tempo na faixa': row['m10'] <= minutes <= row['m90']})
+        levels = np.array([getSeries(REFERENCE, getTs('2026-09-10 18:00'), mm, company, chance)[['p10', 'p50', 'p90', 'm10', 'm50', 'm90']].to_numpy() for mm, chance in ((0, 0), (0, 30), (0.5, 60), (2, 80), (6, 95), (12, 100))])
+        check(f'mais chuva ou mais chance de chuva nunca reduz nenhum quantil ({COMPANIES[company]})', bool((np.diff(levels, axis=0) >= -0.005).all()))
 
-    table = pd.DataFrame(rows)
-    print(table.round(3).to_string(index=False))
-    check('previsão de preço em 1 h com erro médio abaixo de 3% e nenhum acima de 8%', table['erro'].mean() < 0.03 and table['erro'].max() < 0.08, f"médio {table['erro'].mean():.2%}, máximo {table['erro'].max():.2%}")
-    check('preço real dentro da faixa esperada em todos os cenários e nos dois aplicativos', table['dentro'].all(), table.loc[~table['dentro'], ['app', 'cenário']].to_dict('records'))
-    check('faixa p10-p90 cobre o preço real em pelo menos 6 dos 8 cenários de cada aplicativo', bool((table.groupby('app')['na faixa'].sum() >= 6).all()), table.groupby('app')['na faixa'].sum().to_dict())
-    check('previsão de tempo em 1 h com erro médio abaixo de 5% e nenhum acima de 12%', table['erro tempo'].mean() < 0.05 and table['erro tempo'].max() < 0.12, f"médio {table['erro tempo'].mean():.2%}, máximo {table['erro tempo'].max():.2%}")
-    check('faixa m10-m90 cobre o tempo real em pelo menos 5 dos 8 cenários de cada aplicativo', bool((table.groupby('app')['tempo na faixa'].sum() >= 5).all()), table.groupby('app')['tempo na faixa'].sum().to_dict())
+    database.set('DELETE FROM Fares', [()])
+    engine.update()
+    now     = getTs('2026-09-10 17:00')
+    base    = getSeries(REFERENCE, now)
+    other   = getSeries(REFERENCE, now + 30, company='99')
+    target  = round(float(base['p50'][0]) * 1.25, 2)
+    setFare(REFERENCE, 'uber', target, now)
+    tuned   = getSeries(REFERENCE, now + 30)
+    later   = getSeries(REFERENCE, now + 3 * 3600)
+    cal     = getCalibration(REFERENCE, 'uber', now + 3 * 3600)
+    check('preço informado aparece exato na hora, com a faixa estreita', tuned['p50'][0] == target and tuned['p90'][0] - tuned['p10'][0] < 0.25 * (base['p90'][0] - base['p10'][0]), f"pedido {getMoney(target)}, mostra {getMoney(tuned['p50'][0])}")
+    check('a dinâmica do preço informado se dissipa e o nível aprendido fica', 1.05 < later['p50'][0] / base['p50'][18] < 1.2 and later['p90'][0] - later['p10'][0] < base['p90'][18] - base['p10'][18], f"{later['p50'][0] / base['p50'][18]:.3f} três horas depois, nível {math.exp(cal['mean']):.3f}")
+    check('o preço informado de um aplicativo não mexe no outro', getSeries(REFERENCE, now + 30, company='99')['p50'].equals(other['p50']) and getCalibration(REFERENCE, '99', now)['count'] == 0)
 
-    dry  = getSeries(route, getTs('2026-09-11 16:00'), 0.0)
-    wet  = getSeries(route, getTs('2026-09-11 16:00'), 8.0)
-    check('chuva forte encarece o pico da janela em pelo menos R$ 10', wet['p50'].max() - dry['p50'].max() >= 10, f"{getMoney(dry['p50'].max())} x {getMoney(wet['p50'].max())}")
-    check('chuva forte também alonga a viagem prevista', wet['m50'].max() > dry['m50'].max() * 1.05, f"{dry['m50'].max():.0f} min x {wet['m50'].max():.0f} min")
-    check('sem chuva nenhum salto de 10 min passa de 6%', (np.abs(np.diff(dry['p50'].to_numpy())) / dry['p50'].to_numpy()[:-1]).max() <= 0.06)
+    far = {**REFERENCE, 'o_lat': -23.55, 'o_lon': -46.63, 'city': 'São Paulo', 'uf': 'SP'}
+    check('preço informado a mais de 300 km quase não mexe no nível de outra origem', abs(getCalibration(far, 'uber', now)['mean']) < 0.005, getCalibration(far, 'uber', now)['mean'])
 
-    for company in COMPANIES:
-        levels = np.array([getSeries(route, getTs('2026-09-10 18:00'), mm, company)[['p10', 'p50', 'p90', 'm10', 'm50', 'm90']].to_numpy() for mm in (0, 1, 3, 6, 10)])
-        check(f'mais chuva prevista nunca reduz nenhum quantil de preço ou tempo ({COMPANIES[company]})', bool((np.diff(levels, axis=0) >= 0).all()))
+    setFare(REFERENCE, 'uber', target * 10, now + 60)
+    check('preço absurdo fica preso no dobro do esperado', getSeries(REFERENCE, now + 90)['p50'][0] <= 2.01 * base['p50'][0], getMoney(getSeries(REFERENCE, now + 90)['p50'][0]))
 
-# PRECISAO FORA DA AMOSTRA POR APLICATIVO E POR HORIZONTE, EM PRECO E TEMPO, COM A ROTA RASTREADA E COM ROTA NOVA DE UMA OBSERVACAO SO
-def testPrecision(routes):
-    rng   = np.random.default_rng(21)
-    start = getTs('2026-10-05')
-    slots = np.arange(start, start + 8 * 86400, STEP)
-    rain  = np.repeat(np.where(rng.random(len(slots) // 6 + 1) < 0.12, rng.exponential(3.0, len(slots) // 6 + 1), 0.0), 6)[:len(slots)]
-    rows  = []
+    for i in range(25):
+        setFare(REFERENCE, 'uber', round(float(base['p50'][0]) * 1.10, 2), now + 120 + i)
 
-    for route in routes:
-        day   = getClock(slots, route['tz'])[2]
-        frame = pd.DataFrame({'ts': slots, 'rain': rain, 'distance': route['distance'], 'duration': route['duration'], 'corridor': route['corridor'], 'tz': route['tz']})
+    check(f'só os {oracle.SAMPLE} preços mais recentes contam e muitos preços convergem o nível', len(oracle.FARES) == oracle.SAMPLE and abs(math.exp(getCalibration(REFERENCE, 'uber', now + 200)['mean']) - 1.10) < 0.02, f"nível {math.exp(getCalibration(REFERENCE, 'uber', now + 200)['mean']):.3f}")
+    check('zero apaga os preços do aplicativo e volta à média real', setFare(REFERENCE, 'uber', 0, now) == 0 and getSeries(REFERENCE, now)['p50'][0] == base['p50'][0])
 
-        for index, company in enumerate(COMPANIES):
-            prices, times = getMarket(route, slots, rain, company)
-            X    = model.process(frame.assign(company=index), *model.getClock(frame)[:2])
-            base = {column: model.getQuantiles(model.boosters[column], X)[1] * model.SCALES[column](frame, company) for column in model.TARGETS}
-
-            for a in range(204, len(slots) - LEADS, 18):
-                anchor  = slots[a] + 180
-                price, minutes = [value[0] for value in getMarket(route, [anchor], [rain[a]], company)]
-                current = pd.DataFrame({'ts': [anchor], 'rain': [rain[a]], 'price': [price], 'minutes': [minutes]})
-                same    = np.flatnonzero(day[:a] == day[a])
-                tracked = pd.concat([pd.DataFrame({'ts': slots[same], 'rain': rain[same], 'price': prices[same], 'minutes': times[same]}), current], ignore_index=True)
-                grid    = pd.DataFrame({'ts': np.append(anchor, slots[a + 1:a + LEADS]), 'rain': rain[a:a + LEADS]})
-                truth   = {'price': np.append(price, prices[a + 1:a + LEADS]), 'minutes': np.append(minutes, times[a + 1:a + LEADS])}
-
-                for column, prefix in model.TARGETS.items():
-                    rows.append(pd.DataFrame({'app': COMPANIES[company], 'alvo': prefix, 'regime': '0 sem âncora', 'lead': np.arange(LEADS), 'erro': np.abs(base[column][a:a + LEADS] - truth[column]) / truth[column], 'cobertura': np.nan}))
-
-                for regime, obs in (('1 rota rastreada', tracked), ('2 rota nova', current)):
-                    out = model.get(route, grid, obs, company)
-
-                    for column, prefix in model.TARGETS.items():
-                        rows.append(pd.DataFrame({'app': COMPANIES[company], 'alvo': prefix, 'regime': regime, 'lead': np.arange(LEADS), 'erro': np.abs(out[f'{prefix}50'] - truth[column]) / truth[column],
-                                                  'cobertura': ((truth[column] >= out[f'{prefix}10']) & (truth[column] <= out[f'{prefix}90'])).astype(float)}))
-
-    res = pd.concat(rows)
-    res['faixa'] = pd.cut(res['lead'], [-1, 0, 3, 6, 18, 36, 72], labels=['agora', '10-30min', '40-60min', '1-3h', '3-6h', '6-12h'])
-    table = res.groupby(['app', 'alvo', 'regime', 'faixa'], observed=True)[['erro', 'cobertura']].mean().unstack('faixa')
-    pd.set_option('display.width', 220)
-    print(table.round(4).to_string())
-
-    for app in table.index.get_level_values('app').unique():
-        for prefix, name, limit in (('p', 'preço', 0.025), ('m', 'tempo', 0.045)):
-            erro = table['erro'].loc[app, prefix]
-            cobertura = table['cobertura'].loc[app, prefix].drop(columns='agora')
-            check(f'{app}, {name}: observação de agora exata nos dois regimes', erro.loc['1 rota rastreada', 'agora'] == 0 and erro.loc['2 rota nova', 'agora'] == 0)
-            check(f'{app}, {name}: rota rastreada nunca erra mais que sem âncora e ganha no curto prazo', (erro.loc['1 rota rastreada'].drop('agora') <= erro.loc['0 sem âncora'].drop('agora') + 1e-4).all() and erro.loc['1 rota rastreada', '10-30min'] < erro.loc['0 sem âncora', '10-30min'], f"{erro.loc['1 rota rastreada'].drop('agora').max():.2%} x {erro.loc['0 sem âncora'].drop('agora').max():.2%}")
-            check(f'{app}, {name}: erro abaixo de {limit:.1%} em todos os horizontes e regimes', erro.drop(index='0 sem âncora').max().max() < limit, f"{erro.drop(index='0 sem âncora').max().max():.2%}")
-            check(f'{app}, {name}: cobertura entre 76% e 86% em todos os horizontes', cobertura.loc[['1 rota rastreada', '2 rota nova']].min().min() > 0.76 and cobertura.loc[['1 rota rastreada', '2 rota nova']].max().max() < 0.86, f"{cobertura.min().min():.0%} a {cobertura.max().max():.0%}")
-
-# ROTAS FORA DO TREINO, DE 2 A 300 KM, COM E SEM CORREDOR: SEM VIES DE DISTANCIA E COM FAIXA NA COBERTURA NOMINAL; COM AS 5 ROTAS ANTIGAS O TEMPO ERRAVA +2% E A FAIXA COBRIA 60%
-def testGeneralization():
-    rng   = np.random.default_rng(8)
-    start = getTs('2026-10-19')
-    slots = np.arange(start, start + 6 * 86400, STEP)
-    rain  = np.repeat(np.where(rng.random(len(slots) // 6 + 1) < 0.12, rng.exponential(3.0, len(slots) // 6 + 1), 0.0), 6)[:len(slots)]
-    day   = getClock(slots, TZ)[2]
-    rows  = []
-
-    for i, (km, speed, corridor) in enumerate([(2, 25, 0.0), (9, 40, 0.3), (30, 45, 0.0), (30, 45, 0.9), (100, 60, 0.0), (300, 70, 0.3)]):
-        route = {'id': 900 + i, 'distance': km, 'duration': km / speed * 60, 'corridor': corridor, 'tz': TZ}
-
-        for company in COMPANIES:
-            prices, times = getMarket(route, slots, rain, company)
-
-            for a in range(204, len(slots) - LEADS, 18):
-                same  = np.flatnonzero(day[:a + 1] == day[a])
-                out   = model.get(route, pd.DataFrame({'ts': slots[a:a + LEADS], 'rain': rain[a:a + LEADS]}), pd.DataFrame({'ts': slots[same], 'rain': rain[same], 'price': prices[same], 'minutes': times[same]}), company)
-                truth = {'price': prices[a + 1:a + LEADS], 'minutes': times[a + 1:a + LEADS]}
-
-                for column, prefix in model.TARGETS.items():
-                    rows.append(pd.DataFrame({'rota': f'{km} km, {corridor:.0%} no corredor', 'app': COMPANIES[company], 'alvo': prefix, 'erro': out[f'{prefix}50'][1:].to_numpy() / truth[column] - 1, 'cobertura': ((truth[column] >= out[f'{prefix}10'][1:].to_numpy()) & (truth[column] <= out[f'{prefix}90'][1:].to_numpy())).astype(float)}))
-
-    table = pd.concat(rows).groupby(['rota', 'app', 'alvo']).agg(erro=('erro', lambda e: e.abs().mean()), vies=('erro', 'mean'), cobertura=('cobertura', 'mean')).unstack('alvo')
-    print(table.round(4).to_string())
-    check('rotas fora do treino: erro abaixo de 3% no preço e de 5% no tempo', (table['erro']['p'] < 0.03).all() and (table['erro']['m'] < 0.05).all(), f"até {table['erro']['p'].max():.2%} e {table['erro']['m'].max():.2%}")
-    check('rotas fora do treino: viés abaixo de 1,5% e faixa cobrindo entre 68% e 90%', (table['vies'].abs() < 0.015).all().all() and table['cobertura'].min().min() > 0.68 and table['cobertura'].max().max() < 0.90, f"viés até {table['vies'].abs().max().max():.2%}, cobertura de {table['cobertura'].min().min():.0%} a {table['cobertura'].max().max():.0%}")
-
-# ACIDENTE NO CORREDOR: A ANCORA SEGUE O CHOQUE NA PRIMEIRA HORA E NAO CONTAMINA O NIVEL DO RESTO DO DIA (ANTES: VIES DE -6% NA PRIMEIRA HORA E +1,7% DEPOIS)
-def testShock(routes):
-    start = getTs('2026-11-02')
-    slots = np.arange(start, start + 60 * 86400, STEP)
-    rain  = np.zeros(len(slots))
-    rows  = []
-
-    for route in [r for r in routes if r['corridor'] > 0.55][:3]:
-        day      = getClock(slots, route['tz'])[2]
-        incident = getRandom(slots, route['id'], day, route['tz'])[0]
-
-        for company in COMPANIES:
-            prices, times = getMarket(route, slots, rain, company)
-
-            for a in np.flatnonzero(incident > 0.2)[::2]:
-                if a < 144 or a >= len(slots) - LEADS:
-                    continue
-
-                same  = np.flatnonzero(day[:a + 1] == day[a])
-                out   = model.get(route, pd.DataFrame({'ts': slots[a:a + LEADS], 'rain': rain[a:a + LEADS]}), pd.DataFrame({'ts': slots[same], 'rain': rain[same], 'price': prices[same], 'minutes': times[same]}), company)
-                truth = {'price': prices[a + 1:a + LEADS], 'minutes': times[a + 1:a + LEADS]}
-
-                for column, prefix in model.TARGETS.items():
-                    rows.append(pd.DataFrame({'app': COMPANIES[company], 'alvo': prefix, 'lead': np.arange(1, LEADS), 'erro': out[f'{prefix}50'][1:].to_numpy() / truth[column] - 1, 'cobertura': ((truth[column] >= out[f'{prefix}10'][1:].to_numpy()) & (truth[column] <= out[f'{prefix}90'][1:].to_numpy())).astype(float)}))
-
-    res   = pd.concat(rows)
-    res['faixa'] = pd.cut(res['lead'], [0, 6, 18, 72], labels=['primeira hora', '1-3h', '3-12h'])
-    table = res.groupby(['app', 'alvo', 'faixa'], observed=True).agg(erro=('erro', lambda e: e.abs().mean()), vies=('erro', 'mean'), cobertura=('cobertura', 'mean'), n=('erro', 'size'))
-    print(table.round(4).to_string())
-    check('acidente ativo: na primeira hora viés abaixo de 5% e faixa cobrindo ao menos 50%', (table.xs('primeira hora', level='faixa')['vies'].abs() < 0.05).all() and (table.xs('primeira hora', level='faixa')['cobertura'] >= 0.50).all(), table.xs('primeira hora', level='faixa')[['vies', 'cobertura']].round(3).to_dict('index'))
-    check('acidente ativo: de 3 a 12 h o nível do dia não fica contaminado (viés abaixo de 1,2%)', (table.xs('3-12h', level='faixa')['vies'].abs() < 0.012).all(), table.xs('3-12h', level='faixa')['vies'].round(4).to_dict())
-
-# QUALQUER ROTA DO PAIS, NOS DOIS APLICATIVOS: DISTANCIA, TEMPO, FUSO, SERIE COMPLETA E PRECO COERENTE COM A TARIFA
+# QUALQUER ROTA DO PAIS, NOS DOIS APLICATIVOS: MUNICIPIO, FUSO, SERIE COMPLETA E PRECO COERENTE COM A MEDIA REAL DA REGIAO
 def testRoutes():
     rows = []
 
-    for name, src, dst, zone in MATRIX:
+    for name, src, dst, zone, market in MATRIX:
         quotes = {company: engine.getQuote(src, dst, company) for company in COMPANIES}
 
         if any('error' in res for res in quotes.values()):
@@ -386,49 +258,52 @@ def testRoutes():
 
         route = quotes['uber']['route']
         speed = route['distance'] / route['duration'] * 60
-        straight = getDistance(src, dst)
         steps = np.diff(quotes['uber']['df']['ts'].to_numpy())
-        rows.append({'rota': name, 'km': route['distance'], 'livre': route['duration'], 'com trânsito': quotes['uber']['df']['minutes'][0], 'km/h': speed, 'fuso': route['tz'], **{COMPANIES[company]: res['df']['price'][0] for company, res in quotes.items()}})
-        check(f'{name}: fuso, velocidade, distância e série', route['tz'] == zone and 10 < speed < 110 and straight <= route['distance'] < 3 * straight and len(quotes['uber']['df']) == LEADS and (steps[1:] == STEP).all(), f"{route['distance']:.1f} km, {speed:.0f} km/h, {route['tz']}")
+        found = getOrigin(route)['market']
+        rows.append({'rota': name, 'km': route['distance'], 'sem trânsito': getFree(route), 'agora': quotes['uber']['df']['minutes'][0], 'município': found, **{COMPANIES[company]: res['df']['price'][0] for company, res in quotes.items()}})
+        check(f'{name}: município, fuso, velocidade e série', found == market and route['tz'] == zone and 10 < speed < 130 and len(quotes['uber']['df']) == LEADS and (steps[1:] == STEP).all(), f"{found}, {route['distance']:.1f} km, {speed:.0f} km/h, {route['tz']}")
 
         for company, res in quotes.items():
-            df     = res['df']
-            tariff = float(getTariff(route['distance'], route['duration'], 1.0, company))
-            check(f'{name}, {COMPANIES[company]}: preço e tempo coerentes, com as duas faixas abertas', 0.9 * tariff <= df['price'][0] < 2.6 * tariff and 0.85 * route['duration'] <= df['minutes'][0] < 3 * route['duration'] and bool(((df['p10'] < df['p50']) & (df['p50'] < df['p90']) & (df['m10'] < df['m50']) & (df['m50'] < df['m90'])).all()), f"{getMoney(df['price'][0])} e {df['minutes'][0]:.0f} min (livre {route['duration']:.0f} min)")
+            df = res['df']
+            check(f'{name}, {COMPANIES[company]}: faixas abertas e preço por km plausível', 1.2 <= df['price'][0] / route['distance'] <= 6 or route['distance'] < 3, f"{getMoney(df['price'][0])} ({df['price'][0] / route['distance']:.2f}/km), {df['minutes'][0]:.0f} min")
+            check(f'{name}, {COMPANIES[company]}: p10 < p50 < p90 e m10 < m50 < m90 na série inteira', bool(((df['p10'] < df['p50']) & (df['p50'] < df['p90']) & (df['m10'] < df['m50']) & (df['m50'] < df['m90'])).all()))
 
-        check(f'{name}: 99 mais barata que a Uber em toda a série e com o mesmo tempo de viagem', bool((quotes['99']['df']['p50'] < quotes['uber']['df']['p50']).all()) and quotes['99']['df']['m50'].equals(quotes['uber']['df']['m50']), f"{getMoney(quotes['99']['df']['price'][0])} x {getMoney(quotes['uber']['df']['price'][0])}")
+        check(f'{name}: 99 mais barata que a Uber em toda a série e com o mesmo tempo de viagem', bool((quotes['99']['df']['p50'] < quotes['uber']['df']['p50']).all()) and quotes['99']['df']['m50'].equals(quotes['uber']['df']['m50']))
 
     print(pd.DataFrame(rows).round(2).to_string(index=False))
     check('origem igual ao destino vira mensagem', 'error' in engine.getQuote(ORIGIN, ORIGIN))
     check('endereço inexistente vira mensagem', 'error' in engine.getQuote({'label': 'zzzzqqqqxxxxwwww'}, DESTINATION))
     check('ilha sem ligação rodoviária vira mensagem', 'error' in engine.getQuote({'label': 'Fernando de Noronha', 'lat': -3.8547, 'lon': -32.4247}, {'label': 'Recife', 'lat': -8.0476, 'lon': -34.8770}))
 
-# CICLOS DO WORKER EM RELOGIO SIMULADO: OBSERVA, PREVE, CONSOLIDA, MEDE E RETREINA SEM EXCECAO
+# CICLOS DO WORKER EM RELOGIO SIMULADO: GUARDA A PREVISAO DAS ROTAS MONITORADAS E MEDE O ACERTO CONTRA PRECOS INFORMADOS DEPOIS
 def testWorker():
-    start    = (int(clock.time()) // STEP + 1) * STEP
-    now      = [start]
-    versions = []
-    statuses = []
-    Worker.index.time = Model.index.time = lambda: now[0]
+    start  = (int(clock.time()) // STEP + 1) * STEP
+    now    = [start]
+    routes = database.get('SELECT * FROM Routes WHERE used_at > 0 ORDER BY used_at DESC LIMIT ?', (worker.TRACKED,)).to_dict('records')
+    Worker.index.time = lambda: now[0]
 
     try:
-        for i in range(13):
+        for i in range(7):
             now[0] = start + i * STEP + 5
             worker.handle()
-            versions.append(model.version)
-            statuses.append(worker.status)
 
         forecasts = database.get('SELECT COUNT(*) AS n FROM Forecasts')['n'][0]
         worker.handle()
-        check('13 ciclos guardam 5 rotas x 2 aplicativos x 72 previsões, sem duplicar no ciclo repetido', forecasts == 13 * 5 * (LEADS - 1) * len(COMPANIES) and database.get('SELECT COUNT(*) AS n FROM Forecasts')['n'][0] == forecasts, forecasts)
-    finally:
-        Worker.index.time = Model.index.time = clock.time
+        check(f'7 ciclos guardam {len(routes)} rotas x 2 aplicativos x 72 previsões, sem duplicar no ciclo repetido', forecasts == 7 * len(routes) * len(COMPANIES) * (LEADS - 1) and database.get('SELECT COUNT(*) AS n FROM Forecasts')['n'][0] == forecasts, forecasts)
+        before = worker.status
 
-    check('previsões consolidadas contra preço e tempo observados nos dois aplicativos', worker.metrics['n'] >= 600 and 0.4 <= worker.metrics['p']['coverage'] <= 1.0 and 0.4 <= worker.metrics['m']['coverage'] <= 1.0, {key: value for key, value in worker.metrics.items()})
-    check('status só mostra a taxa de acerto da faixa com amostra suficiente', statuses[0].endswith(f'5 rotas monitoradas · consolidando previsões (0 de {worker.SAMPLE})') and '· últimas 24 h: faixa acerta' in statuses[-1], [statuses[0], statuses[-1]])
-    changes = np.flatnonzero(np.diff(versions))
-    check('retreino acontece e respeita o intervalo de 1 h', len(changes) >= 1 and bool(np.all(np.diff(changes) * STEP > worker.RETRAIN)), versions)
-    check('uma linha de métricas por ciclo com previsão a consolidar', len(database.get('SELECT ts FROM Metrics')) == 12)
+        for route in routes[:3]:
+            shown = engine.get(route, 'uber', now[0] + 60)
+            engine.setFare(route, 'uber', round(float(shown['p50'][0]) * 1.05, 2), now[0] + 60)
+
+        now[0] += STEP
+        worker.handle()
+    finally:
+        Worker.index.time = clock.time
+
+    check('status pede o preço real antes de ter com o que comparar e mede o acerto depois', 'informe o preço' in before and 'as previsões feitas antes erraram' in worker.status and worker.metrics['matched'] == 3, [before, worker.status])
+    check('acerto medido com erro de ~5% e a faixa cobrindo o preço informado', 0.02 < worker.metrics['mape'] < 0.08 and worker.metrics['coverage'] > 0.8, {key: round(value, 3) for key, value in worker.metrics.items()})
+    engine.setFare(routes[0], 'uber', 0)
 
     worker.stop()
     worker.start()
@@ -437,7 +312,7 @@ def testWorker():
     worker.stop()
     check('start/stop idempotentes e thread encerrada', not worker.thread.is_alive())
 
-# JANELA REAL: CAMPOS VAZIOS, CARREGANDO, LOCALIZACAO, CONSULTA, JANELA DE 1 A 12 H, TEMPO REAL, ALERTAS E CRUZETA
+# JANELA REAL: CAMPOS VAZIOS, CARREGANDO, LOCALIZACAO, CONSULTA, JANELA DE 1 A 12 H, TEMPO REAL, PRECO INFORMADO, ALERTAS E CRUZETA
 def testInterface():
     from Interface import index as screen
     sounds = []
@@ -445,7 +320,7 @@ def testInterface():
     app = screen.Interface()
 
     try:
-        check('abre com origem e destino vazios, na Uber e sem gráfico', app.origin.entry.get() == '' and app.destination.entry.get() == '' and app.chart.df is None and app.price.cget('text') == '—' and app.selector.get() == 'Uber' and 'publicada' in app.hint.cget('text'), app.hint.cget('text'))
+        check('abre com origem e destino vazios, na Uber e sem gráfico', app.origin.entry.get() == '' and app.destination.entry.get() == '' and app.chart.df is None and app.price.cget('text') == '—' and app.selector.get() == 'Uber' and 'médias reais' in app.hint.cget('text'), app.hint.cget('text'))
 
         search = api.search
         api.search = lambda text, limit=6: clock.sleep(1.2) or search(text, limit)
@@ -490,10 +365,12 @@ def testInterface():
         check('sem estimativa o mapa abre mesmo assim, no último lugar usado ou na região', fallback.winfo_exists() and fallback.zoom in (12, 15) and fallback.address.cget('text') != '', fallback.address.cget('text')[:60])
         fallback.stop()
 
+        app.origin.set({'label': 'Rua Professor Antônio Álvares 92, Macaé', **{key: ORIGIN[key] for key in ('lat', 'lon')}})
         app.destination.set({'label': 'Teatro Popular de Rio das Ostras', **DESTINATION})
         app.getForecast()
         ready = wait(app, lambda: app.chart.df is not None and not app.busy, 60)
-        check('consulta renderiza preço, tempo com trânsito, resumo e as linhas de preço, chuva e trânsito', ready and app.price.cget('text').startswith('R$') and app.change.cget('text').startswith('•') and len(app.chart.figure.axes) == 4 and app.stats['distance'].cget('text').endswith('km'), f"{app.price.cget('text')} · {app.stats['distance'].cget('text')} · {app.message.cget('text')}")
+        check('consulta renderiza preço, dinâmica, tempo com trânsito, resumo e as linhas de preço, chuva e trânsito', ready and app.price.cget('text').startswith('R$') and app.change.cget('text').startswith('•') and len(app.chart.figure.axes) == 4 and app.stats['distance'].cget('text').endswith('km') and app.stats['surge'].cget('text').endswith('×'), f"{app.price.cget('text')} · {app.stats['surge'].cget('text')} · {app.message.cget('text')}")
+        check('origem da tarifa diz o município e que ainda não há preço seu', 'Macaé/RJ' in app.hint.cget('text') and 'sem preço seu' in app.hint.cget('text'), app.hint.cget('text'))
         app.chart.canvas.draw()
         ticks   = [label.get_text() for label in app.chart.traffic.get_yticklabels() if label.get_text()]
         minutes = app.stats['minutes'].cget('text')
@@ -504,19 +381,19 @@ def testInterface():
         app.selector.set('99')
         app.handleCompany('99')
         switched = wait(app, lambda: app.price.cget('text') != uber, 30)
-        check('seletor troca o aplicativo e recalcula preço e gráfico com a tarifa dele', switched and app.company == '99' and app.chart.price.get_title('left').endswith('· 99'), f"{uber} (Uber) -> {app.price.cget('text')} (99)")
+        check('seletor troca o aplicativo e recalcula preço e gráfico com a tarifa dele', switched and app.company == '99' and app.chart.price.get_title('left').endswith('· 99') and '× 0,90' in app.hint.cget('text'), f"{uber} (Uber) -> {app.price.cget('text')} (99) · {app.hint.cget('text')}")
 
         shown  = lambda: float(app.price.cget('text').replace('R$ ', '').replace('.', '').replace(',', '.')) if app.price.cget('text').startswith('R$') else 0.0
         target = round(shown() * 1.12, 2)
         app.fare.insert(0, f'{target:.2f}'.replace('.', ','))
         app.handleFare()
-        tuned = wait(app, lambda: 'ajustada' in app.message.cget('text') and abs(shown() - target) < 0.02 * target, 30)
-        check('preço real informado calibra a tarifa e o preço passa a bater com ele', tuned and 'calibrada' in app.hint.cget('text'), f"{app.hint.cget('text')} · pedido {getMoney(target)}, mostra {app.price.cget('text')}")
+        tuned = wait(app, lambda: 'registrado' in app.message.cget('text') and abs(shown() - target) < 0.005, 30)
+        check('preço real informado aparece exato e a origem da tarifa conta ele', tuned and 'ajustada a 1 preço' in app.hint.cget('text'), f"{app.hint.cget('text')} · pedido {getMoney(target)}, mostra {app.price.cget('text')}")
 
         app.fare.insert(0, '0')
         app.handleFare()
-        cleared = wait(app, lambda: 'apagada' in app.message.cget('text'), 30)
-        check('zero apaga a calibração e a tarifa volta à tabela publicada', cleared and 'publicada' in app.hint.cget('text'), app.hint.cget('text'))
+        cleared = wait(app, lambda: 'apagados' in app.message.cget('text'), 30)
+        check('zero apaga os preços informados e volta à média real da região', cleared and 'sem preço seu' in app.hint.cget('text'), app.hint.cget('text'))
         app.selector.set('Uber')
         app.handleCompany('Uber')
         wait(app, lambda: not app.syncing, 30)
@@ -524,7 +401,7 @@ def testInterface():
         app.after_cancel(app.jobs['sync'])
         app.handleTick()
         synced = app.syncing and wait(app, lambda: not app.syncing, 30)
-        check('tempo real sempre ativo e sem botão: cada ciclo observa o preço de novo', synced and not hasattr(app, 'toggle') and app.change.cget('text').startswith(('•', '▼', '▲')), app.change.cget('text'))
+        check('tempo real sempre ativo e sem botão: cada ciclo recalcula o preço', synced and not hasattr(app, 'toggle') and app.change.cget('text').startswith(('•', '▼', '▲')), app.change.cget('text'))
 
         app.chart.handleWindow(1)
         app.update()
@@ -542,31 +419,39 @@ def testInterface():
 
         check('alertas a cada 10% de afastamento, sem repetir no mesmo patamar', sounds == ['good', 'good', 'bad', 'bad'], sounds)
 
+        shown = app.df
+        app.showForecast(app.route, app.company, shown.assign(probability=np.nan))
+        app.chart.canvas.draw()
+        check('sem chance de chuva publicada o gráfico desenha e mostra traço no lugar da porcentagem', app.stats['rain'].cget('text').endswith('—') and not app.chart.chance.texts, app.stats['rain'].cget('text'))
+        app.showForecast(app.route, app.company, shown)
+
+        app.chart.handleMotion(type('Event', (), {'inaxes': app.chart.price, 'xdata': app.chart.x[0]})())
+        now = app.chart.tip.get_text()
         app.chart.handleMotion(type('Event', (), {'inaxes': app.chart.price, 'xdata': app.chart.x[12]})())
-        check('cruzeta e resumo aparecem no hover, com o tempo de viagem e a hora de chegada', app.chart.tip.get_visible() and 'chegada às' in app.chart.tip.get_text() and '%   trânsito' not in app.chart.tip.get_text(), app.chart.tip.get_text().replace(chr(10), ' | '))
+        check('cruzeta e resumo no hover: dinâmica agora, tempo de viagem e hora de chegada', 'dinâmica estimada' in now and app.chart.tip.get_visible() and 'chegada às' in app.chart.tip.get_text(), app.chart.tip.get_text().replace(chr(10), ' | '))
     finally:
         app.stop()
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.WARNING, format='%(asctime)s [%(threadName)s] %(levelname)s %(message)s')
+    database.path = os.path.join(FOLDER, 'surge.db')
 
     try:
+        worker.setup()
         testUtils()
         testApi()
         testDistance()
-        routes = testBootstrap()
-        testOracle(routes[0])
-        testTariff(routes[0])
-        testScenarios(routes[0])
-        testPrecision(routes)
-        testGeneralization()
-        testShock(routes)
+        measured = testMarket()
+        testOracle()
+        testModel()
         testRoutes()
         testWorker()
         testInterface()
     finally:
         shutil.rmtree(FOLDER, ignore_errors=True)
 
+    table = pd.DataFrame({key: measured[key] for key in ('antiga', 'rota', 'cidade', 'app')}).assign(uf=measured['uf'])
+    print(table.groupby('uf').agg(lambda e: np.abs(e).median()).round(3).assign(n=table.groupby('uf').size()).to_string())
     print(f'\n{len(failures)} falha(s): {failures}' if failures else '\ntodas as verificações passaram')
     raise SystemExit(1 if failures else 0)

@@ -1,185 +1,224 @@
 package com.klauss.tarifa
 
+import java.text.Normalizer
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlin.math.exp
-import kotlin.math.max
+import kotlin.math.floor
+import kotlin.math.ln
 import kotlin.math.min
 import kotlin.math.sqrt
 
 
-// TARIFA DE UM APLICATIVO: BANDEIRADA, VALOR POR KM E POR MINUTO, TAXA FIXA, PISO DA CORRIDA, SENSIBILIDADE A DINAMICA E TETO DELA
-data class Fare(val base: Double, val km: Double, val minute: Double, val fee: Double, val floor: Double, val surge: Double, val cap: Double)
+// APLICATIVO: RAZAO SOBRE A UBERX, SENSIBILIDADE A DINAMICA E TETO DELA
+data class Tariff(val ratio: Double, val surge: Double, val cap: Double)
 
-// PRECO REAL LIDO NO APLICATIVO PELO USUARIO, COM O ESTADO DO MERCADO DAQUELE INSTANTE
-class Ride(val company: String, val distance: Double, val minutes: Double, val surge: Double, val observed: Double)
+// PRECO REAL INFORMADO PELO USUARIO, COM O MUNICIPIO DA ORIGEM, O NIVEL DA REGIAO E O PRECO CENTRAL QUE O APP MOSTRAVA SEM CALIBRACAO NAQUELE INSTANTE
+class Ride(val company: String, val ts: Long, val lat: Double, val lon: Double, val city: String, val uf: String, val level: Double, val expected: Double, val observed: Double)
 
-// ESTADO DO MERCADO NUM INSTANTE, O MESMO PARA OS DOIS APLICATIVOS
-class State(val excess: DoubleArray, val noise: DoubleArray, val minutes: DoubleArray)
+// ESTADO ESPERADO NOS INSTANTES PEDIDOS: EXCESSO DE DEMANDA, CONGESTIONAMENTO RELATIVO E MINUTOS DE VIAGEM
+class State(val excess: DoubleArray, val traffic: DoubleArray, val minutes: DoubleArray)
 
-// MERCADO SIMULADO QUE DEFINE O PRECO "REAL": MESMA FORMULA, MESMAS CONSTANTES E MESMO SORTEIO DO ORACLE/INDEX.PY DO DESKTOP
+// NIVEL DE PRECO (LOG), RITMO (LOG) E INCERTEZA NA ORIGEM, COM O NOME QUE A TELA MOSTRA
+class Market(val name: String, val level: Double, val pace: Double, val sigma: Double)
+
+// NIVEL APRENDIDO DOS PRECOS INFORMADOS E A DINAMICA DO MAIS RECENTE, QUE SE DISSIPA
+class Calibration(val mean: Double, val variance: Double, val last: Double, val ts: Long, val weight: Double, val count: Int, val market: Market)
+
+// MUNICIPIO DA TABELA: SEDE, NIVEL E RITMO AJUSTADOS AS MEDIAS REAIS DA UBERX
+class City(val name: String, val uf: String, val lat: Double, val lon: Double, val level: Double, val pace: Double)
+
+// TABELA DO MARKET.PY DO DESKTOP: TARIFA SEM DINAMICA, INCLINACAO DO RITMO, INCERTEZAS E O NIVEL DE CADA ESTADO E MUNICIPIO
+class Table(data: JSONObject) {
+    val updated  = data.getString("updated")
+    val routes   = data.getInt("routes")
+    val tariff   = data.getJSONObject("tariff")
+    val base     = tariff.getDouble("base")
+    val km       = tariff.getDouble("km")
+    val minute   = tariff.getDouble("minute")
+    val long     = tariff.getDouble("long")
+    val floor    = tariff.getDouble("floor")
+    val paceKm   = data.getJSONObject("pace").getDouble("km")
+    val speed    = data.getJSONObject("pace").getDouble("speed")
+    val traffic  = data.getDouble("traffic")
+    val week     = data.getJSONArray("week").let { values -> DoubleArray(values.length()) { values.getDouble(it) } }    // congestionamento real de cada hora da semana
+    val sigma    = data.getJSONObject("sigma")
+    val national = getPair(data.getJSONArray("national"))
+    val states   = data.getJSONObject("states").let { item -> item.keys().asSequence().associateWith { getPair(item.getJSONArray(it)) } }
+    val cities   = data.getJSONArray("cities").let { items -> List(items.length()) { items.getJSONArray(it).let { c -> City(c.getString(0), c.getString(1), c.getDouble(2), c.getDouble(3), c.getDouble(4), c.getDouble(5)) } } }
+    val keys     = cities.withIndex().associate { (index, city) -> Oracle.getKey(city.name, city.uf) to index }
+
+    fun getPair(array: JSONArray) = doubleArrayOf(array.getDouble(0), array.getDouble(1))
+}
+
+// MERCADO ESPERADO QUE DEFINE O PRECO: MESMAS FORMULAS, CONSTANTES E TABELA DO ORACLE/INDEX.PY DO DESKTOP
 object Oracle {
-    // tabela publicada da UberX na capital do Rio em 2026: bandeirada 2,30, R$ 1,55/km, R$ 0,32/min, minima 10,50 e reserva 0,75; a 99 nao publica tabela fixa
+    // a 99 nao publica precos e fica na razao tipica das comparacoes publicas
     val TARIFFS = linkedMapOf(
-        "uber" to Fare(2.50, 1.2076, 0.2200, 1.00, 7.50, 1.00, 2.50),    // calibrada no desktop para a mediana da rota de referencia em dia util, 9-16 h e sem chuva, dar R$ 54,85
-        "99"   to Fare(2.10, 1.1147, 0.2031, 0.00, 6.50, 0.78, 2.20),    // cerca de 10% abaixo da uber fora do pico e mais ainda na dinamica, como o mercado
+        "uber" to Tariff(1.00, 1.00, 2.50),
+        "99"   to Tariff(0.90, 1.00, 2.50),
     )
 
-    const val RIDGE  = 6.0      // observacoes equivalentes que a forma da tabela publicada vale no ajuste; o nivel ja se move com a primeira
-    const val SAMPLE = 20       // precos reais mais recentes de cada aplicativo que entram no ajuste
-    const val DIGITS = 6        // casas da tarifa ajustada; arredondar aqui faz o celular e o computador chegarem na mesma tabela apesar do solver diferente
-    val LIMITS = 0.5..2.0       // correcao maxima de cada termo, para um preco digitado errado nao destruir a tarifa
+    const val DEMAND_SURGE = 0.35     // dinamica no pico de demanda mais forte da semana
+    const val RAIN_SURGE   = 0.40     // dinamica somada pela chuva forte
+    const val RAIN_DELAY   = 0.25     // tempo de viagem a mais com chuva forte
+    const val RAIN_MM      = 4.0      // chuva (mm/h) que produz 63% do efeito maximo
+    const val FREE         = 0.25     // parte do atraso medio que continua de madrugada (semaforo, conversao, via lenta)
+    const val BANDWIDTH    = 20.0     // km em que o nivel de uma cidade vizinha ainda pesa
+    const val PRIOR        = 0.05     // peso do estado frente as cidades proximas; longe de todas vale o estado
+    const val KM_REF       = 20.0
+    const val LONG         = 40.0     // km a partir dos quais a uber cobra mais por km: a viagem intermunicipal volta vazia
+    const val SPEED_REF    = 50.0     // km/h
+    const val SAMPLE       = 20       // precos informados mais recentes de cada aplicativo
+    const val RADIUS       = 50.0     // km em que um preco informado ainda diz algo sobre outra origem
+    const val TAU          = 2700.0   // s ate a dinamica vista num preco informado cair a 37%
+    const val HOLD         = 120L     // s em que o preco mostrado pelo app ainda vale inteiro
+    const val DYNAMIC      = 0.10     // desvio log do preco real em torno do esperado fora do pico; separa o nivel da dinamica
+    val PACE   = 1.0..3.5             // ritmo real sobre o osrm; fora disso a regressao extrapola
+    val LIMITS = 0.5..2.0             // preco informado fora disso em relacao ao esperado e erro de digitacao, nao mercado
 
-    const val URBAN          = 0.18     // atraso relativo no pico fora do corredor
-    const val CORRIDOR       = 0.60     // atraso relativo no pico na Amaral Peixoto
-    const val INCIDENT_DELAY = 0.80
-    const val RAIN_DELAY     = 0.25
-    const val RAIN_MM        = 4.0      // chuva (mm/h) que produz 63% do efeito maximo
-    const val DEMAND_SURGE   = 0.20
-    const val RAIN_SURGE     = 0.32
-    const val INCIDENT_SURGE = 0.25
-    const val INCIDENTS      = 0.7      // acidentes por dia no corredor
-    const val INCIDENT_TAU   = 2700.0   // s ate o congestionamento de um acidente cair a 37%
-    const val NOISE          = 0.025    // desvio log do preco entre slots (oferta de motoristas)
-    const val DAY_NOISE      = 0.015    // desvio log do nivel de cada dia local
-    const val TIME_NOISE     = 0.04     // desvio log do tempo de viagem entre slots (semaforos, motorista, fila)
-    const val DAY_TIME_NOISE = 0.02     // desvio log do transito de cada dia local (obra, ferias escolares, evento)
-    const val SLOTS          = 150      // slots de ruido por dia; 25 h cobrem o dia de fim de horario de verao
-    const val SEED           = 7L
-
-    // dia da semana (0 = segunda, feriado entra como 6), hora do pico, amplitude da demanda, largura (h); mesma ordem do desktop
-    val PEAKS = (0..4).map { doubleArrayOf(it.toDouble(), 7.00, 0.70, 0.9) } + (0..4).map { doubleArrayOf(it.toDouble(), 12.25, 0.15, 0.7) } + (0..3).map { doubleArrayOf(it.toDouble(), 17.75, 0.85, 1.1) } + listOf(
-        doubleArrayOf(4.0, 18.00, 1.00, 1.3),
-        doubleArrayOf(4.0, 23.00, 0.30, 1.5),
-        doubleArrayOf(5.0, 11.00, 0.35, 2.0),
-        doubleArrayOf(5.0, 21.00, 0.30, 2.5),
-        doubleArrayOf(6.0, 17.00, 0.55, 2.0),
+    // dia (0 = segunda, feriado vale 6), hora do centro, largura (h), demanda; picos da procura por corrida que movem a dinamica, na mesma ordem do desktop
+    val PEAKS = (0..4).map { doubleArrayOf(it.toDouble(), 13.00, 3.5, 0.10) } + (0..4).map { doubleArrayOf(it.toDouble(), 7.75, 1.0, 0.55) } + (0..3).map { doubleArrayOf(it.toDouble(), 18.00, 1.5, 0.70) } + listOf(
+        doubleArrayOf(4.0, 18.25, 1.7, 0.85),
+        doubleArrayOf(4.0, 23.50, 1.5, 0.45),
+        doubleArrayOf(5.0, 12.00, 3.0, 0.15),
+        doubleArrayOf(5.0, 22.00, 2.5, 0.50),
+        doubleArrayOf(6.0, 1.50, 1.5, 0.35),
+        doubleArrayOf(6.0, 12.00, 3.0, 0.10),
+        doubleArrayOf(6.0, 18.00, 2.0, 0.35),
     )
 
-    @Volatile var FARES = TARIFFS    // tabela em uso; cada preco real informado pelo usuario desloca ela
+    @Volatile var MARKET: Table? = null           // tabela ajustada pelo market.py do desktop
+    @Volatile var FARES = emptyList<Ride>()        // precos reais informados, os mais recentes de cada aplicativo
 
-    fun getFare(company: String) = FARES.getValue(company)
-
-    // TARIFA DO APLICATIVO; SEM DINAMICA E NA DURACAO LIVRE E A BASE QUE O MODELO USA PARA NORMALIZAR O PRECO
-    fun getTariff(distance: Double, duration: Double, surge: Double = 1.0, company: String = "uber"): Double {
-        val fare = getFare(company)
-        return fare.fee + max(fare.floor, fare.base + fare.km * distance + fare.minute * duration) * surge
+    fun load(text: String) {
+        MARKET = Table(JSONObject(text))
     }
 
-    // AJUSTE DA TARIFA AOS PRECOS REAIS INFORMADOS: O NIVEL SEGUE A PRIMEIRA OBSERVACAO E A FORMA SO SE MOVE QUANDO VARIAS ROTAS DISCORDAM DA TABELA PUBLICADA
+    fun ready() = MARKET != null
+
+    // CHAVE DO MUNICIPIO SEM ACENTO NEM CAIXA, COMO O NOMINATIM E O IBGE ESCREVEM DIFERENTE
+    fun getKey(city: String, uf: String) = Normalizer.normalize("$city/$uf", Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "").lowercase()
+
+    // PRECOS REAIS INFORMADOS: OS MAIS RECENTES DE CADA APLICATIVO FICAM EM MEMORIA PARA A CALIBRACAO DE CADA CONSULTA
     fun update(rows: List<Ride>) {
-        FARES = linkedMapOf(*TARIFFS.map { (company, fare) -> company to getFitted(fare, rows.filter { it.company == company && it.observed > fare.fee }.takeLast(SAMPLE)) }.toTypedArray())
+        val sorted = rows.sortedBy { it.ts }
+        val recent = sorted.groupBy { it.company }.values.flatMap { it.takeLast(SAMPLE) }.toSet()
+        FARES = sorted.filter { it in recent }
     }
 
-    fun getFitted(fare: Fare, found: List<Ride>): Fare {
-        val terms = found.map { doubleArrayOf(fare.base, fare.km * it.distance, fare.minute * it.minutes) }
-        val above = terms.indices.filter { terms[it].sum() > fare.floor }    // abaixo da tarifa minima o preco nao depende dos coeficientes, so do piso
-        val below = terms.indices.filter { terms[it].sum() <= fare.floor }
-        val floor = if (below.isEmpty()) fare.floor else getRound(fare.floor * getBounded(getMedian(below.map { (found[it].observed - fare.fee) / max(found[it].surge, 1e-9) }) / fare.floor), DIGITS)
+    // CONGESTIONAMENTO REAL DA HORA LOCAL (INTERPOLADO ENTRE OS CENTROS DAS HORAS, CIRCULAR NA SEMANA) E DEMANDA POR PICOS GAUSSIANOS COM DISTANCIA CIRCULAR DE 168 H
+    fun getProfile(weekday: Int, hour: Double): Pair<Double, Double> {
+        val table  = MARKET!!.week
+        val week   = (weekday * 24 + hour - 0.5).mod(168.0)    // o valor de cada hora vale no meio dela
+        val index  = floor(week).toInt()
+        val share  = week - index
+        var demand = 0.0
 
-        if (above.isEmpty()) return fare.copy(floor = floor)
-
-        val rows   = above.map { i -> DoubleArray(3) { terms[i][it] * found[i].surge } }
-        val target = above.map { found[it].observed - fare.fee }
-        val whole  = rows.map { it.sum() }
-        val level  = whole.indices.sumOf { whole[it] * target[it] } / max(whole.sumOf { it * it }, 1e-9)
-        val scale  = DoubleArray(3) { k -> sqrt(rows.sumOf { it[k] * it[k] } / rows.size) + 1e-9 }
-        val matrix = Array(3) { r -> DoubleArray(3) { c -> rows.sumOf { it[r] / scale[r] * (it[c] / scale[c]) } + if (r == c) RIDGE else 0.0 } }
-        val side   = DoubleArray(3) { r -> rows.indices.sumOf { rows[it][r] / scale[r] * target[it] } + RIDGE * level * scale[r] }
-        val shape  = getSolved(matrix, side)
-        val term   = { k: Int, value: Double -> getRound(value * getBounded(shape[k] / scale[k]), DIGITS) }
-        return fare.copy(base = term(0, fare.base), km = term(1, fare.km), minute = term(2, fare.minute), floor = floor)
-    }
-
-    // CORRECAO ACEITA PARA UM TERMO DA TARIFA; UM PRECO DIGITADO ERRADO NAO TIRA A TABELA DA FAIXA PLAUSIVEL
-    fun getBounded(value: Double) = if (value.isFinite()) value.coerceIn(LIMITS.start, LIMITS.endInclusive) else 1.0
-
-    // MEDIANA COMO A DO NUMPY: COM NUMERO PAR DE VALORES, A MEDIA DOS DOIS DO MEIO
-    fun getMedian(values: List<Double>): Double {
-        val sorted = values.sorted()
-        val half   = sorted.size / 2
-        return if (sorted.size % 2 == 1) sorted[half] else (sorted[half - 1] + sorted[half]) / 2
-    }
-
-    // SISTEMA 3X3 PELA REGRA DE CRAMER, A MESMA CONTA EM QUALQUER LINGUAGEM; A CRISTA GARANTE QUE A MATRIZ E INVERSIVEL
-    fun getSolved(matrix: Array<DoubleArray>, side: DoubleArray) = DoubleArray(3) { k -> getDeterminant(Array(3) { r -> DoubleArray(3) { c -> if (c == k) side[r] else matrix[r][c] } }) / getDeterminant(matrix) }
-
-    fun getDeterminant(m: Array<DoubleArray>) = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
-
-    // DEMANDA RELATIVA NA SEMANA LOCAL: PICOS GAUSSIANOS COM DISTANCIA CIRCULAR DE 168 H, QUE ATRAVESSA MEIA-NOITE E DOMINGO
-    fun getDemand(weekday: Int, hour: Double) = PEAKS.sumOf { peak ->
-        val z = ((weekday * 24 + hour - peak[0] * 24 - peak[1] + 84).mod(168.0) - 84) / peak[3]
-        peak[2] * exp(-0.5 * (z * z))
-    }
-
-    // SORTEIOS COM SEMENTE POR DIA LOCAL: ACIDENTES NO CORREDOR (COMUNS AS ROTAS), RUIDO DE OFERTA E DE TEMPO DE VIAGEM DE CADA ROTA
-    fun getRandom(ts: LongArray, routeId: Long, days: LongArray, tz: String): Array<DoubleArray> {
-        val incident = DoubleArray(ts.size)
-        val noise    = DoubleArray(ts.size)
-        val jitter   = DoubleArray(ts.size)
-
-        for (day in days.min() - 1..days.max()) {
-            val midnight  = getMidnight(day, tz).toDouble()
-            var rng       = Rng(SEED, day)
-            val starts    = DoubleArray(rng.getPoisson(INCIDENTS)) { midnight + 86400.0 * rng.getDouble() }
-            val amplitude = DoubleArray(starts.size) { 0.3 + (1.0 - 0.3) * rng.getDouble() }
-
-            for (i in ts.indices) {
-                var sum = 0.0
-
-                for (k in starts.indices) {
-                    val age = ts[i] - starts[k]
-                    sum += amplitude[k] * exp(-max(age, 0.0) / INCIDENT_TAU) * (if (age >= 0) 1.0 else 0.0)
-                }
-
-                incident[i] += sum
-            }
-
-            rng = Rng(SEED, routeId, day)
-            val dayNoise   = DAY_NOISE * rng.getNormal()
-            val slotNoise  = DoubleArray(SLOTS) { NOISE * rng.getNormal() }
-            val dayJitter  = DAY_TIME_NOISE * rng.getNormal()
-            val slotJitter = DoubleArray(SLOTS) { TIME_NOISE * rng.getNormal() }
-
-            for (i in ts.indices) {
-                if (days[i] != day) continue
-                val slot = Math.floorDiv((ts[i] - midnight).toLong(), STEP).toInt()
-                noise[i]  = dayNoise + slotNoise[slot]
-                jitter[i] = dayJitter + slotJitter[slot]
-            }
+        for (peak in PEAKS) {
+            val delta = (weekday * 24 + hour - peak[0] * 24 - peak[1] + 84).mod(168.0) - 84
+            demand += exp(-0.5 * ((delta / peak[2]) * (delta / peak[2]))) * peak[3]
         }
 
-        return arrayOf(incident, noise, jitter)
+        return table[index] * (1 - share) + table[(index + 1) % 168] * share to demand
     }
 
-    // ESTADO DO MERCADO NO INSTANTE, O MESMO PARA OS DOIS APLICATIVOS: EXCESSO DE DEMANDA, RUIDO DA OFERTA E MINUTOS DE VIAGEM
+    // NIVEL DE PRECO, RITMO E INCERTEZA NA ORIGEM: O DO MUNICIPIO QUANDO A UBER PUBLICA TRECHOS DELE; SENAO A MEDIA DOS VIZINHOS DO MESMO ESTADO, PUXADA PARA O ESTADO QUANDO NAO HA NENHUM PERTO
+    fun getMarket(lat: Double, lon: Double, city: String = "", uf: String = ""): Market {
+        val table = MARKET!!
+        val cityS = table.sigma.getDouble("city")
+        val index = table.keys[getKey(city, uf)]
+
+        if (index != null) return table.cities[index].let { Market("${it.name}/${it.uf}", it.level, it.pace, cityS) }
+
+        val distance = DoubleArray(table.cities.size) { getDistance(lat, lon, table.cities[it].lat, table.cities[it].lon) }
+        val state    = uf.ifEmpty { table.cities[distance.indices.minBy { distance[it] }].uf }
+        val same     = table.cities.map { it.uf == state }
+        val prior    = table.states[state] ?: table.national
+        val weight   = DoubleArray(distance.size) { if (same[it]) exp(-((distance[it] / BANDWIDTH) * (distance[it] / BANDWIDTH))) else 0.0 }
+        val total    = weight.sum() + PRIOR
+        val near     = distance.indices.filter { same[it] }.minByOrNull { distance[it] }
+        val stateS   = table.sigma.getDouble("state")
+        val name     = if (near != null && distance[near] <= 2 * BANDWIDTH) "${table.cities[near].name}/$state e arredores" else if (state in table.states) "$state (média do estado)" else "média nacional"
+        val level    = (weight.indices.sumOf { weight[it] * table.cities[it].level } + PRIOR * prior[0]) / total
+        val pace     = (weight.indices.sumOf { weight[it] * table.cities[it].pace } + PRIOR * prior[1]) / total
+        return Market(name, level, pace, sqrt(cityS * cityS + (stateS * stateS - cityS * cityS) * PRIOR / total))
+    }
+
+    fun getOrigin(route: Route) = getMarket(route.oLat, route.oLon, route.city, route.uf)
+
+    // RITMO MEDIO DO MES SOBRE O TEMPO DO OSRM: O OSRM ERRA MAIS NA CIDADE (CURTA E LENTA) E NA RODOVIA RAPIDA, E CADA REGIAO TEM O SEU TRANSITO
+    fun getPace(route: Route, pace: Double): Double {
+        val table = MARKET!!
+        val speed = route.distance / route.duration * 60
+        return exp(pace + table.paceKm * ln(route.distance / KM_REF) + table.speed * ln(speed / SPEED_REF)).coerceIn(PACE.start, PACE.endInclusive)
+    }
+
+    // ESTADO ESPERADO NO INSTANTE, O MESMO PARA OS DOIS APLICATIVOS: EXCESSO DE DEMANDA, CONGESTIONAMENTO RELATIVO E MINUTOS DE VIAGEM
     fun getState(route: Route, ts: LongArray, rain: DoubleArray): State {
-        val clock = getClock(ts, route.tz)
-        val (incident, noise, jitter) = getRandom(ts, route.id, clock.day, route.tz)
+        val table   = MARKET!!
+        val clock   = getClock(ts, route.tz)
+        val pace    = getPace(route, getOrigin(route).pace)
+        val free    = 1 + (pace - 1) * FREE
         val excess  = DoubleArray(ts.size)
+        val traffic = DoubleArray(ts.size)
         val minutes = DoubleArray(ts.size)
 
         for (i in ts.indices) {
+            val (jam, rush) = getProfile(clock.weekday[i], clock.hour[i])
             val wet    = 1 - exp(-rain[i] / RAIN_MM)
-            val demand = getDemand(clock.weekday[i], clock.hour[i])
-            val delay  = (URBAN + CORRIDOR * route.corridor) * demand + INCIDENT_DELAY * route.corridor * incident[i] + RAIN_DELAY * wet
-            excess[i]  = DEMAND_SURGE * demand + RAIN_SURGE * wet + INCIDENT_SURGE * route.corridor * incident[i]
-            minutes[i] = getRound(route.duration * (1 + delay) * exp(jitter[i]), 1)
+            excess[i]  = DEMAND_SURGE * rush + RAIN_SURGE * wet
+            traffic[i] = jam / table.traffic
+            minutes[i] = route.duration * (free + (pace - free) * jam / table.traffic) * (1 + RAIN_DELAY * wet)
         }
 
-        return State(excess, noise, minutes)
+        return State(excess, traffic, minutes)
     }
 
-    // MULTIPLICADOR EFETIVO DO APLICATIVO: A DINAMICA DELE SOBRE O EXCESSO DE DEMANDA, LIMITADA PELO TETO, MAIS O RUIDO DA OFERTA, QUE E DO MERCADO
-    fun getSurge(excess: Double, noise: Double, company: String): Double {
-        val fare = getFare(company)
-        return min(1 + fare.surge * excess, fare.cap) * exp(noise)
+    // TEMPO DE VIAGEM DE MADRUGADA, SEM TRANSITO: A REFERENCIA DO RESUMO E DO GRAFICO
+    fun getFree(route: Route): Double {
+        val pace = getPace(route, getOrigin(route).pace)
+        return route.duration * (1 + (pace - 1) * FREE)
     }
 
-    // PRECO QUE O APLICATIVO MOSTRA A PARTIR DO ESTADO GUARDADO
-    fun getPrice(distance: Double, minutes: Double, excess: Double, noise: Double, company: String) = getRound(getTariff(distance, minutes, getSurge(excess, noise, company), company), 2)
-
-    // PRECO E TEMPO DE VIAGEM QUE O APLICATIVO MOSTRA NO INSTANTE: O MESMO ATRASO DE TRANSITO ALONGA A VIAGEM E ENTRA NA TARIFA
-    fun getMarket(route: Route, ts: LongArray, rain: DoubleArray, company: String = "uber"): Pair<DoubleArray, DoubleArray> {
-        val state = getState(route, ts, rain)
-        return DoubleArray(ts.size) { getPrice(route.distance, state.minutes[it], state.excess[it], state.noise[it], company) } to state.minutes
+    // MULTIPLICADOR DA DINAMICA DO APLICATIVO SOBRE O EXCESSO DE DEMANDA, LIMITADO PELO TETO
+    fun getSurge(excess: Double, company: String): Double {
+        val fare = TARIFFS.getValue(company)
+        return min(1 + fare.surge * excess, fare.cap)
     }
+
+    // PRECO SEM CALIBRACAO: TARIFA SEM DINAMICA NO NIVEL DA CIDADE DE ORIGEM, COM PISO DA CORRIDA CURTA, VEZES A DINAMICA
+    fun getTariff(level: Double, distance: Double, minutes: Double, excess: Double, company: String): Double {
+        val table = MARKET!!
+        val base  = maxOf(table.floor, table.base + table.km * distance + table.minute * minutes + table.long * maxOf(distance - LONG, 0.0))
+        return exp(level) * TARIFFS.getValue(company).ratio * base * getSurge(excess, company)
+    }
+
+    // PARTE DO PRECO QUE VEM DOS MINUTOS; E O QUANTO O ERRO DO TEMPO DE VIAGEM PESA NO PRECO
+    fun getShare(distance: Double, minutes: Double): Double {
+        val table = MARKET!!
+        val time  = table.minute * minutes
+        val base  = table.base + table.km * distance + time + table.long * maxOf(distance - LONG, 0.0)
+        return if (base > table.floor) time / base else 0.0
+    }
+
+    // CALIBRACAO PELOS PRECOS INFORMADOS: NIVEL BAYESIANO (PRIORI DA REGIAO, PESO PELA DISTANCIA DA ORIGEM) E A DINAMICA DO PRECO MAIS RECENTE, QUE SE DISSIPA COM O TEMPO
+    fun getCalibration(route: Route, company: String, now: Long): Calibration {
+        val market = getOrigin(route)
+        val rows   = FARES.filter { it.company == company && it.ts <= now }
+
+        if (rows.isEmpty()) return Calibration(0.0, market.sigma * market.sigma, 0.0, now, 0.0, 0, market)
+
+        val y      = rows.map { ln((it.observed / (it.expected * exp(getMarket(it.lat, it.lon, it.city, it.uf).level - it.level))).coerceIn(LIMITS.start, LIMITS.endInclusive)) }
+        val weight = rows.map { exp(-getDistance(route.oLat, route.oLon, it.lat, it.lon) / RADIUS) }
+        val last   = rows.size - 1
+        val old    = List(last) { weight[it] / (DYNAMIC * DYNAMIC) }
+        val v0     = 1 / (1 / (market.sigma * market.sigma) + old.sum())
+        val m0     = v0 * old.indices.sumOf { old[it] * y[it] }
+        val noise  = DYNAMIC * DYNAMIC / weight[last]
+        return Calibration(m0 + v0 / (v0 + noise) * (y[last] - m0), v0 * noise / (v0 + noise), y[last], rows[last].ts, weight[last], weight.count { it > 0.5 }, market)
+    }
+
+    // CALIBRACAO NEUTRA QUE ANCORA EXATAMENTE NO INSTANTE: E COM ELA QUE O PRECO CENTRAL SEM CALIBRACAO E GUARDADO JUNTO DO PRECO INFORMADO
+    fun getAnchor(route: Route, now: Long) = Calibration(0.0, 0.0, 0.0, now, 1.0, 0, getOrigin(route))
 }

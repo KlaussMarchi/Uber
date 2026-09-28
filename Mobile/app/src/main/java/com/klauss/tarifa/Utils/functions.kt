@@ -53,9 +53,6 @@ fun getClock(ts: LongArray, tz: String): Clock {
     return clock
 }
 
-// INICIO DO DIA LOCAL EM UNIX TIME; NUM DIA QUE PULA A MEIA-NOITE (HORARIO DE VERAO) VALE O PRIMEIRO INSTANTE QUE EXISTE
-fun getMidnight(day: Long, tz: String) = LocalDate.ofEpochDay(day).atStartOfDay(ZoneId.of(tz)).toEpochSecond()
-
 fun getLocal(ts: Long, tz: String): ZonedDateTime = Instant.ofEpochSecond(ts).atZone(ZoneId.of(tz))
 
 // DISTANCIA EM LINHA RETA ENTRE DOIS PONTOS (HAVERSINE), EM KM
@@ -63,6 +60,13 @@ fun getDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double 
     val p1 = Math.toRadians(lat1); val p2 = Math.toRadians(lat2)
     val dp = p2 - p1; val dl = Math.toRadians(lon2) - Math.toRadians(lon1)
     return 2 * 6371.0088 * asin(sqrt(sin(dp / 2).pow(2) + cos(p1) * cos(p2) * sin(dl / 2).pow(2)))
+}
+
+// MEDIANA COMO A DO NUMPY: COM NUMERO PAR DE VALORES, A MEDIA DOS DOIS DO MEIO
+fun getMedian(values: List<Double>): Double {
+    val sorted = values.sorted()
+    val half   = sorted.size / 2
+    return if (sorted.size % 2 == 1) sorted[half] else (sorted[half - 1] + sorted[half]) / 2
 }
 
 // INTERPOLACAO LINEAR DO NP.INTERP: CONSTANTE FORA DA GRADE E VALOR EXATO SOBRE UM PONTO DELA
@@ -104,3 +108,6 @@ fun getDelay(minutes: Double): String {
     val total = Math.rint(minutes)
     return (if (total < 0) "-" else "+") + getDuration(abs(total))
 }
+
+// CHANCE DE CHUVA EM PORCENTAGEM; HORA SEM CHANCE PUBLICADA APARECE COMO TRACO, COMO NO DESKTOP
+fun getChance(value: Double) = if (value.isFinite()) "${getFixed(value, 0)}%" else "—"

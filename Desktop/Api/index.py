@@ -13,6 +13,7 @@ class Api:
     PHOTON    = 'https://photon.komoot.io/api/'
     REVERSE   = 'https://photon.komoot.io/reverse'
     NOMINATIM = 'https://nominatim.openstreetmap.org/search'
+    CITY      = 'https://nominatim.openstreetmap.org/reverse'
     OSRM      = ('https://router.project-osrm.org/route/v1/driving/', 'https://routing.openstreetmap.de/routed-car/route/v1/driving/')    # demonstracao do projeto e espelho da FOSSGIS com o mesmo mapa; o segundo so entra quando o primeiro falha
     FORECAST  = 'https://api.open-meteo.com/v1/forecast'
     ARCHIVE   = 'https://archive-api.open-meteo.com/v1/archive'
@@ -26,7 +27,6 @@ class Api:
     }
     AGENT     = 'TarifaDinamica/1.0 (desktop app em Python)'
     TIMEOUT   = 12
-    CORRIDOR  = ('Rodovia Amaral Peixoto', 'RJ-106')
     BIAS      = {'lat': -22.43, 'lon': -41.85, 'zoom': 12}    # prioriza a regiao de Macae e Rio das Ostras sem esconder o resto do pais
     BRAZIL    = '-74.0,-33.8,-34.7,5.3'
     MAX_SNAP  = 2000     # m do ponto pedido ate a via mais proxima; acima disso nao ha acesso de carro (ilha, mar)
@@ -152,18 +152,21 @@ class Api:
         parts    = [props.get('name'), street, props.get('district'), props.get('city'), props.get('state')]
         return {'label': ', '.join(dict.fromkeys(filter(None, parts))), 'lat': lat, 'lon': lon}
 
-    # ROTA DE CARRO NO OSRM (COM O ESPELHO COMO RESERVA) E A FRACAO NA RODOVIA AMARAL PEIXOTO (RJ-106); PONTO LONGE DE QUALQUER VIA (ILHA, MAR) NAO TEM ROTA
+    # ROTA DE CARRO NO OSRM (COM O ESPELHO COMO RESERVA): DISTANCIA E TEMPO SEM TRANSITO; PONTO LONGE DE QUALQUER VIA (ILHA, MAR) NAO TEM ROTA
     def getRoute(self, src, dst):
         path = f"{src['lon']},{src['lat']};{dst['lon']},{dst['lat']}"
-        res  = next(filter(None, (self.get(url + path, {'overview': 'false', 'steps': 'true'}) for url in self.OSRM)), None)
+        res  = next(filter(None, (self.get(url + path, {'overview': 'false'}) for url in self.OSRM)), None)
 
         if res is None or res.get('code') != 'Ok' or not res.get('routes') or max(point['distance'] for point in res['waypoints']) > self.MAX_SNAP:
             return None
 
-        route = res['routes'][0]
-        steps = [step for leg in route['legs'] for step in leg['steps']]
-        onCorridor = sum(step['distance'] for step in steps if any(key in f"{step.get('name', '')} {step.get('ref', '')}" for key in self.CORRIDOR))
-        return {'distance': route['distance'] / 1000, 'duration': route['duration'] / 60, 'corridor': onCorridor / max(route['distance'], 1.0)}
+        return {'distance': res['routes'][0]['distance'] / 1000, 'duration': res['routes'][0]['duration'] / 60}
+
+    # MUNICIPIO E ESTADO DE UMA COORDENADA PELA FRONTEIRA ADMINISTRATIVA DO OSM (NOMINATIM NO NIVEL DE CIDADE); A MEDIA REAL DA UBER E POR MUNICIPIO DE ORIGEM
+    def getCity(self, lat, lon):
+        res  = self.get(self.CITY, {'lat': lat, 'lon': lon, 'format': 'jsonv2', 'zoom': 10}) or {}
+        code = (res.get('address') or {}).get('ISO3166-2-lvl4', '')
+        return {'city': res['name'], 'uf': code[3:]} if res.get('name') and code.startswith('BR-') else None
 
     # FUSO IANA DE UMA COORDENADA; O BRASIL TEM QUATRO FUSOS E A DEMANDA SEGUE A HORA LOCAL DA ROTA
     def getZone(self, lat, lon):

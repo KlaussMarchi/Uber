@@ -6,6 +6,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.BeforeClass
 import org.junit.Test
 import kotlin.math.abs
 
@@ -15,25 +16,14 @@ class ParityTest {
     companion object {
         val golden = JSONObject(File("src/test/resources/golden.json").readText())
 
+        @JvmStatic @BeforeClass
+        fun setup() = Oracle.load(File("src/main/assets/markets.json").readText())
+
         fun getLongs(array: JSONArray) = LongArray(array.length()) { array.getLong(it) }
-        fun getDoubles(array: JSONArray) = DoubleArray(array.length()) { array.getDouble(it) }
-        fun getRoute(item: JSONObject) = Route(item.getLong("id"), "", "", 0.0, 0.0, 0.0, 0.0, item.getDouble("distance"), item.getDouble("duration"), item.getDouble("corridor"), item.getString("tz"))
+        fun getDoubles(array: JSONArray) = DoubleArray(array.length()) { array.optDouble(it) }
+        fun getRoute(item: JSONObject) = Route(item.getLong("id"), "", "", item.getDouble("o_lat"), item.getDouble("o_lon"), 0.0, 0.0, item.getDouble("distance"), item.getDouble("duration"), item.getString("tz"), item.getString("city"), item.getString("uf"))
         fun getPlace(item: JSONObject) = Place(item.getString("label"), item.getDouble("lat"), item.getDouble("lon"), if (item.has("accuracy")) item.getDouble("accuracy") else null)
-    }
-
-    @Test
-    fun rng() {
-        val cases = golden.getJSONArray("rng")
-
-        for (i in 0 until cases.length()) {
-            val case    = cases.getJSONObject(i)
-            val entropy = getLongs(case.getJSONArray("entropy"))
-            val raw     = Rng(*entropy).let { rng -> List(8) { rng.next() } }
-            assertEquals(List(8) { case.getJSONArray("raw").getString(it).toULong() }, raw)
-            Rng(*entropy).let { rng -> getDoubles(case.getJSONArray("normal")).forEach { assertEquals(it, rng.getNormal(), 0.0) } }
-            Rng(*entropy).let { rng -> getLongs(case.getJSONArray("poisson")).forEach { assertEquals(it, rng.getPoisson(0.7).toLong()) } }
-            Rng(*entropy).let { rng -> getDoubles(case.getJSONArray("double")).forEach { assertEquals(it, rng.getDouble(), 0.0) } }
-        }
+        fun getRides(array: JSONArray) = List(array.length()) { array.getJSONObject(it) }.map { Ride(it.getString("company"), it.getLong("ts"), it.getDouble("lat"), it.getDouble("lon"), it.getString("city"), it.getString("uf"), it.getDouble("level"), it.getDouble("expected"), it.getDouble("observed")) }
     }
 
     @Test
@@ -98,120 +88,71 @@ class ParityTest {
     // ALERTAS A CADA 10% DE AFASTAMENTO SEM REPETIR NO MESMO PATAMAR, NA MESMA SEQUENCIA QUE O TEST.PY DO DESKTOP CONFERE
     @Test
     fun alerts() {
-        val route = Route(-1, "", "", 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, "America/Sao_Paulo")
+        val route = Route(-1, "", "", 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, "America/Sao_Paulo")
         Tracker.baselines[route.id to "uber"] = 100.0 to "10:00"
         Tracker.levels[route.id to "uber"] = 0
         assertEquals(listOf("good", "good", "bad", "bad"), listOf(95.0, 89.0, 85.0, 79.0, 88.0, 105.0, 111.0, 125.0).mapNotNull { Tracker.check(route, "uber", it) })
     }
 
-    // SORTEIOS DO ORACULO: RUIDO E JITTER EXATOS; O ACIDENTE PODE DIFERIR NA ULTIMA CASA PELA ORDEM DA SOMA DO NUMPY
+    // MUNICIPIO PELA CHAVE SEM ACENTO NEM CAIXA, COMO O NOMINATIM E O IBGE ESCREVEM DIFERENTE
     @Test
-    fun random() {
-        val cases = golden.getJSONArray("random")
-
-        for (i in 0 until cases.length()) {
-            val case  = cases.getJSONObject(i)
-            val route = getRoute(case.getJSONObject("route"))
-            val ts    = getLongs(case.getJSONArray("ts"))
-            val (incident, noise, jitter) = Oracle.getRandom(ts, route.id, getClock(ts, route.tz).day, route.tz)
-            assertTrue(getDoubles(case.getJSONArray("noise")).contentEquals(noise))
-            assertTrue(getDoubles(case.getJSONArray("jitter")).contentEquals(jitter))
-            getDoubles(case.getJSONArray("incident")).forEachIndexed { k, value -> assertEquals(value, incident[k], 1e-12) }
-        }
-    }
-
-    // SOMA DAS ARVORES DE CADA BOOSTER IGUAL AO PREDICT DO LIGHTGBM E QUANTIS REARRANJADOS NA CHUVA IGUAIS AO GETQUANTILES DO DESKTOP
-    @Test
-    fun quantiles() {
-        Model.setup(File("src/main/assets/model.json").readText())
-        val item  = golden.getJSONObject("quantiles")
-        val frame = item.getJSONObject("frame")
-        val ts    = getLongs(frame.getJSONArray("ts"))
-        val clock = getClock(ts, "America/Sao_Paulo")
-        val X     = Array(ts.size) { i -> doubleArrayOf(clock.hour[i], clock.weekday[i].toDouble(), *listOf("distance", "duration", "corridor", "rain", "company").map { frame.getJSONArray(it).getDouble(i) }.toDoubleArray()) }
-        var worst = 0.0
-
-        for (column in Model.TARGETS.keys) {
-            val trees  = Model.boosters!!.getValue(column)
-            val sorted = Model.getQuantiles(trees, X)
-
-            Model.QUANTILES.forEachIndexed { q, key ->
-                getDoubles(item.getJSONObject("raw").getJSONObject(column).getJSONArray(key)).forEachIndexed { i, value -> worst = maxOf(worst, abs(value - trees[q].sumOf { it.get(X[i]) })) }
-                getDoubles(item.getJSONObject("sorted").getJSONArray(column).getJSONArray(q)).forEachIndexed { i, value -> worst = maxOf(worst, abs(value - sorted[q][i])) }
-            }
-        }
-
-        println("maior diferenca nas arvores e quantis: $worst")
-        assertEquals(0.0, worst, 1e-12)
-    }
-
-    // SERIE DO MODELO (P10 A M90) IGUAL AO CENTAVO E AO CENTESIMO DE MINUTO EM TODAS AS ROTAS, HORARIOS E REGIMES DE OBSERVACAO, INCLUSIVE COM CHOQUE
-    @Test
-    fun model() {
-        Model.setup(File("src/main/assets/model.json").readText())
-        val cases = golden.getJSONArray("model")
-        var worst = 0.0
+    fun keys() {
+        val cases = golden.getJSONArray("keys")
 
         for (i in 0 until cases.length()) {
             val case = cases.getJSONObject(i)
-            val obs  = case.getJSONObject("obs")
-            val out  = Model.get(getRoute(case.getJSONObject("route")), getLongs(case.getJSONArray("ts")), getDoubles(case.getJSONArray("rain")), Obs(getLongs(obs.getJSONArray("ts")), getDoubles(obs.getJSONArray("rain")), mapOf("price" to getDoubles(obs.getJSONArray("price")), "minutes" to getDoubles(obs.getJSONArray("minutes")))), case.getString("company"))!!
-
-            for ((key, values) in out) getDoubles(case.getJSONObject("out").getJSONArray(key)).forEachIndexed { k, value -> worst = maxOf(worst, abs(value - values[k])) }
+            assertEquals(case.getString("key"), Oracle.getKey(case.getString("city"), case.getString("uf")))
         }
-
-        println("maior diferenca na serie do modelo em ${cases.length()} casos: $worst")
-        assertEquals(0.0, worst, 1e-9)
     }
 
-    // SERIE COMPLETA DO ENGINE (GRADE, CHUVA E CHANCE INTERPOLADAS, PRECO OBSERVADO AGORA E QUANTIS) IGUAL A DO DESKTOP COM O MESMO CLIMA E AS MESMAS OBSERVACOES
+    // CONGESTIONAMENTO E DEMANDA DA SEMANA LOCAL IGUAIS BIT A BIT: A SOMA DOS PICOS E SEQUENCIAL NOS DOIS
     @Test
-    fun engine() {
-        Model.setup(File("src/main/assets/model.json").readText())
-        val cases = golden.getJSONArray("engine")
+    fun profile() {
+        val item    = golden.getJSONObject("profile")
+        val weekday = getLongs(item.getJSONArray("weekday"))
+        val hour    = getDoubles(item.getJSONArray("hour"))
+        val traffic = getDoubles(item.getJSONArray("traffic"))
+        val demand  = getDoubles(item.getJSONArray("demand"))
+
+        for (i in weekday.indices) {
+            val (jam, rush) = Oracle.getProfile(weekday[i].toInt(), hour[i])
+            assertEquals(traffic[i], jam, 1e-15)
+            assertEquals(demand[i], rush, 1e-15)
+        }
+    }
+
+    // MERCADO NA ORIGEM: O NIVEL DO MUNICIPIO DA TABELA, DOS VIZINHOS DO MESMO ESTADO OU DO ESTADO, COM O MESMO NOME NA TELA
+    @Test
+    fun markets() {
+        val cases = golden.getJSONArray("markets")
 
         for (i in 0 until cases.length()) {
-            val case    = cases.getJSONObject(i)
-            val weather = case.getJSONObject("weather")
-            val today   = case.getJSONObject("today")
-            val out     = case.getJSONObject("out")
-            val route   = getRoute(case.getJSONObject("route"))
-            val company = case.getString("company")
-            val minutes = getDoubles(today.getJSONArray("minutes"))
-            val excess  = getDoubles(today.getJSONArray("excess"))
-            val noise   = getDoubles(today.getJSONArray("noise"))
-            val price   = DoubleArray(minutes.size) { Oracle.getPrice(route.distance, minutes[it], excess[it], noise[it], company) }
-            val series  = Engine.getSeries(route, case.getLong("now"), Weather(getDoubles(weather.getJSONArray("ts")), getDoubles(weather.getJSONArray("rain")), getDoubles(weather.getJSONArray("probability"))), Obs(getLongs(today.getJSONArray("ts")), getDoubles(today.getJSONArray("rain")), mapOf("price" to price, "minutes" to minutes)), company)!!
-
-            assertTrue(getLongs(out.getJSONArray("ts")).contentEquals(series.ts))
-            assertTrue(getDoubles(out.getJSONArray("rain")).contentEquals(series.rain))
-            assertTrue(getDoubles(out.getJSONArray("probability")).contentEquals(series.probability))
-            assertEquals(out.getJSONArray("price").getDouble(0), series.price, 0.0)
-            assertEquals(out.getJSONArray("minutes").getDouble(0), series.minutes, 0.0)
-            series.bands.forEach { (key, values) -> assertTrue(key, getDoubles(out.getJSONArray(key)).contentEquals(values)) }
+            val case   = cases.getJSONObject(i)
+            val market = Oracle.getMarket(case.getDouble("lat"), case.getDouble("lon"), case.getString("city"), case.getString("uf"))
+            assertEquals(case.getString("market"), market.name)
+            assertEquals(case.getDouble("level"), market.level, 1e-12)
+            assertEquals(case.getDouble("pace"), market.pace, 1e-12)
+            assertEquals(case.getDouble("sigma"), market.sigma, 1e-12)
         }
     }
 
-    // ESTADO, PRECO E TEMPO DO ORACULO IGUAIS AO CENTAVO E AO DECIMO DE MINUTO EM MILHARES DE INSTANTES, ROTAS, FUSOS, CHUVAS E NOS DOIS APLICATIVOS
+    // ESTADO ESPERADO (DINAMICA, CONGESTIONAMENTO E MINUTOS) EM MILHARES DE INSTANTES, ROTAS, FUSOS E CHUVAS, E O TEMPO SEM TRANSITO
     @Test
-    fun market() {
-        val cases = golden.getJSONArray("market")
+    fun state() {
+        val cases = golden.getJSONArray("state")
 
         for (i in 0 until cases.length()) {
             val case  = cases.getJSONObject(i)
             val route = getRoute(case.getJSONObject("route"))
-            val ts    = getLongs(case.getJSONArray("ts"))
-            val rain  = getDoubles(case.getJSONArray("rain"))
-            val state = Oracle.getState(route, ts, rain)
-            val (price, minutes) = Oracle.getMarket(route, ts, rain, case.getString("company"))
-            getDoubles(case.getJSONArray("excess")).forEachIndexed { k, value -> assertEquals(value, state.excess[k], 1e-12) }    // o excesso carrega o acidente, que pode diferir na ultima casa pela ordem da soma do numpy
-            assertTrue(getDoubles(case.getJSONArray("noise")).contentEquals(state.noise))
-            assertTrue(getDoubles(case.getJSONArray("price")).contentEquals(price))
-            assertTrue(getDoubles(case.getJSONArray("minutes")).contentEquals(minutes))
+            val state = Oracle.getState(route, getLongs(case.getJSONArray("ts")), getDoubles(case.getJSONArray("rain")))
+            getDoubles(case.getJSONArray("excess")).forEachIndexed { k, value -> assertEquals(value, state.excess[k], 1e-12) }
+            getDoubles(case.getJSONArray("traffic")).forEachIndexed { k, value -> assertEquals(value, state.traffic[k], 1e-12) }
+            getDoubles(case.getJSONArray("minutes")).forEachIndexed { k, value -> assertEquals(value, state.minutes[k], 1e-9) }
+            assertEquals(case.getDouble("free"), Oracle.getFree(route), 1e-9)
         }
     }
 
-    // TARIFA, DINAMICA E PRECO DE CADA APLICATIVO IGUAIS AOS DO DESKTOP EM DISTANCIAS, TEMPOS E DEMANDAS DE TODA ORDEM
+    // TARIFA, PARTE DOS MINUTOS E DINAMICA DE CADA APLICATIVO EM DISTANCIAS, TEMPOS, NIVEIS E DEMANDAS DE TODA ORDEM
     @Test
     fun tariff() {
         val cases = golden.getJSONArray("tariff")
@@ -219,27 +160,89 @@ class ParityTest {
         for (i in 0 until cases.length()) {
             val case    = cases.getJSONObject(i)
             val company = case.getString("company")
-            assertEquals(case.getDouble("tariff"), Oracle.getTariff(case.getDouble("distance"), case.getDouble("duration"), case.getDouble("surge"), company), 0.0)
-            assertEquals(case.getDouble("surged"), Oracle.getSurge(case.getDouble("excess"), case.getDouble("noise"), company), 0.0)
-            assertEquals(case.getDouble("price"), Oracle.getPrice(case.getDouble("distance"), case.getDouble("duration"), case.getDouble("excess"), case.getDouble("noise"), company), 0.0)
+            assertEquals(case.getDouble("tariff"), Oracle.getTariff(case.getDouble("level"), case.getDouble("distance"), case.getDouble("minutes"), case.getDouble("excess"), company), 1e-9)
+            assertEquals(case.getDouble("share"), Oracle.getShare(case.getDouble("distance"), case.getDouble("minutes")), 1e-12)
+            assertEquals(case.getDouble("surge"), Oracle.getSurge(case.getDouble("excess"), company), 0.0)
         }
     }
 
-    // TARIFA AJUSTADA AOS PRECOS REAIS INFORMADOS: A MESMA TABELA QUE O DESKTOP PRODUZ, DA PRIMEIRA OBSERVACAO AO PRECO ABSURDO QUE E LIMITADO
+    // NORMAL ACUMULADA E QUANTIS DA MISTURA DE CHUVA IGUAIS AOS DO DESKTOP
     @Test
-    fun fares() {
-        val cases = golden.getJSONArray("fares")
+    fun quantiles() {
+        val normal = golden.getJSONObject("normal")
+        getDoubles(normal.getJSONArray("z")).zip(getDoubles(normal.getJSONArray("cdf"))).forEach { (z, cdf) -> assertEquals(cdf, Model.getNormal(z), 1e-15) }
+
+        val cases = golden.getJSONArray("quantiles")
+
+        for (i in 0 until cases.length()) {
+            val case = cases.getJSONObject(i)
+            assertEquals(case.getDouble("value"), Model.getQuantile(case.getDouble("q"), case.getDouble("wet"), getDoubles(case.getJSONArray("means")), getDoubles(case.getJSONArray("sigmas"))), 1e-12)
+        }
+    }
+
+    // CALIBRACAO PELOS PRECOS INFORMADOS: OS MESMOS PRECOS GUARDADOS, O MESMO NIVEL, A MESMA VARIANCIA E A MESMA DINAMICA DO MAIS RECENTE
+    @Test
+    fun calibration() {
+        val cases = golden.getJSONArray("calibration")
+
+        for (i in 0 until cases.length()) {
+            val case = cases.getJSONObject(i)
+            Oracle.update(getRides(case.getJSONArray("rides")))
+            val found = Oracle.getCalibration(getRoute(case.getJSONObject("route")), case.getString("company"), case.getLong("now"))
+            assertEquals(case.getInt("kept"), Oracle.FARES.size)
+            assertEquals(case.getJSONObject("market").getString("market"), found.market.name)
+            assertEquals(case.getDouble("mean"), found.mean, 1e-12)
+            assertEquals(case.getDouble("var"), found.variance, 1e-12)
+            assertEquals(case.getDouble("last"), found.last, 1e-12)
+            assertEquals(case.getLong("ts"), found.ts)
+            assertEquals(case.getDouble("weight"), found.weight, 1e-12)
+            assertEquals(case.getInt("count"), found.count)
+        }
+
+        Oracle.update(emptyList())
+    }
+
+    // FAIXAS DO MODELO (P10 A M90) IGUAIS AO CENTAVO E AO CENTESIMO DE MINUTO EM TODAS AS ROTAS, HORARIOS, CHUVAS E CALIBRACOES, INCLUSIVE ANCORADA
+    @Test
+    fun model() {
+        val cases = golden.getJSONArray("model")
+        var worst = 0.0
 
         for (i in 0 until cases.length()) {
             val case  = cases.getJSONObject(i)
-            val items = case.getJSONArray("rides")
-            Oracle.update(List(items.length()) { items.getJSONObject(it) }.map { Ride(it.getString("company"), it.getDouble("distance"), it.getDouble("minutes"), it.getDouble("surge"), it.getDouble("observed")) })
+            val route = getRoute(case.getJSONObject("route"))
+            val now   = case.getLong("now")
+            Oracle.update(getRides(case.getJSONArray("rides")))
+            val calibration = if (case.getString("label") == "ancora") Oracle.getAnchor(route, now) else Oracle.getCalibration(route, case.getString("company"), now)
+            val out = Model.get(route, getLongs(case.getJSONArray("ts")), getDoubles(case.getJSONArray("rain")), getDoubles(case.getJSONArray("probability")), case.getString("company"), calibration)
 
-            for (company in COMPANIES.keys) {
-                val found = case.getJSONObject("fares").getJSONObject(company)
-                val fare  = Oracle.getFare(company)
-                listOf("base" to fare.base, "km" to fare.km, "minute" to fare.minute, "fee" to fare.fee, "floor" to fare.floor, "surge" to fare.surge, "cap" to fare.cap).forEach { (key, value) -> assertEquals("$company.$key no caso $i", found.getDouble(key), value, 1e-9) }
-            }
+            for ((key, values) in out) getDoubles(case.getJSONObject("out").getJSONArray(key)).forEachIndexed { k, value -> worst = maxOf(worst, abs(value - values[k])) }
+        }
+
+        Oracle.update(emptyList())
+        println("maior diferenca nas faixas em ${cases.length()} casos: $worst")
+        assertEquals(0.0, worst, 1e-9)
+    }
+
+    // SERIE COMPLETA DO ENGINE (GRADE, CHUVA E CHANCE INTERPOLADAS, PRECO, TEMPO E DINAMICA AGORA E FAIXAS) COM O MESMO CLIMA E OS MESMOS PRECOS INFORMADOS
+    @Test
+    fun engine() {
+        val cases = golden.getJSONArray("engine")
+
+        for (i in 0 until cases.length()) {
+            val case    = cases.getJSONObject(i)
+            val weather = case.getJSONObject("weather")
+            val out     = case.getJSONObject("out")
+            Oracle.update(getRides(case.getJSONArray("rides")))
+            val series  = Engine.getSeries(getRoute(case.getJSONObject("route")), case.getLong("now"), Weather(getDoubles(weather.getJSONArray("ts")), getDoubles(weather.getJSONArray("rain")), getDoubles(weather.getJSONArray("probability"))), case.getString("company"))!!
+
+            assertTrue(getLongs(out.getJSONArray("ts")).contentEquals(series.ts))
+            assertTrue(getDoubles(out.getJSONArray("rain")).contentEquals(series.rain))
+            assertTrue(getDoubles(out.getJSONArray("probability")).contentEquals(series.probability))
+            assertEquals(out.getJSONArray("price").getDouble(0), series.price, 0.0)
+            assertEquals(out.getJSONArray("minutes").getDouble(0), series.minutes, 0.0)
+            assertEquals(out.getJSONArray("surge").getDouble(0), series.surge, 1e-12)
+            series.bands.forEach { (key, values) -> assertTrue(key, getDoubles(out.getJSONArray(key)).contentEquals(values)) }
         }
 
         Oracle.update(emptyList())

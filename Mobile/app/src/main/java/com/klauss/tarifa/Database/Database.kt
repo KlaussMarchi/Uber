@@ -9,14 +9,15 @@ import android.database.sqlite.SQLiteOpenHelper
 // LUGAR DIGITADO OU ESCOLHIDO; SEM COORDENADAS AINDA PRECISA SER GEOCODIFICADO, E A PRECISAO SO EXISTE NA ESTIMATIVA DE LOCALIZACAO
 data class Place(val label: String, val lat: Double? = null, val lon: Double? = null, val accuracy: Double? = null)
 
-// ROTA CACHEADA NO BANCO: DISTANCIA (KM), DURACAO SEM TRANSITO (MIN), FRACAO NO CORREDOR E FUSO IANA DA ORIGEM
-data class Route(val id: Long, val origin: String, val destination: String, val oLat: Double, val oLon: Double, val dLat: Double, val dLon: Double, val distance: Double, val duration: Double, val corridor: Double, val tz: String)
+// ROTA CACHEADA NO BANCO: DISTANCIA (KM), DURACAO SEM TRANSITO DO OSRM (MIN), FUSO IANA E MUNICIPIO DA ORIGEM (VAZIO ATE O NOMINATIM RESPONDER)
+data class Route(val id: Long, val origin: String, val destination: String, val oLat: Double, val oLon: Double, val dLat: Double, val dLon: Double, val distance: Double, val duration: Double, val tz: String, val city: String = "", val uf: String = "")
 
-// SQLITE LOCAL (WAL) COM O MESMO ESQUEMA DO DESKTOP; BANCO DE OUTRA VERSAO E RECRIADO E O WORKER VOLTA A OBSERVAR
+// SQLITE LOCAL (WAL) COM O MESMO ESQUEMA DO DESKTOP; BANCO DE OUTRA VERSAO E MIGRADO SEM PERDER AS ROTAS E OS PRECOS QUE O USUARIO INFORMOU
 object Database {
-    const val VERSION = 2
+    const val VERSION = 3
 
-    val TABLES = listOf("Routes", "Prices", "Forecasts", "Metrics")    // Fares fica: os precos reais informados pelo usuario nao sao sinteticos
+    val ROUTE   = listOf("id", "origin", "destination", "o_lat", "o_lon", "d_lat", "d_lon", "distance", "duration", "tz", "used_at")    // colunas que uma rota de versao antiga ja tinha
+    val COLUMNS = "id, origin, destination, o_lat, o_lon, d_lat, d_lon, distance, duration, tz, city, uf"
 
     val SCHEMA = listOf(
         """CREATE TABLE IF NOT EXISTS Routes (
@@ -29,19 +30,11 @@ object Database {
             d_lon       REAL    NOT NULL,
             distance    REAL    NOT NULL,
             duration    REAL    NOT NULL,
-            corridor    REAL    NOT NULL,
             tz          TEXT    NOT NULL,
             used_at     INTEGER NOT NULL,
+            city        TEXT    NOT NULL DEFAULT '',
+            uf          TEXT    NOT NULL DEFAULT '',
             UNIQUE (o_lat, o_lon, d_lat, d_lon)
-        )""",
-        """CREATE TABLE IF NOT EXISTS Prices (
-            route_id INTEGER NOT NULL REFERENCES Routes (id),
-            ts       INTEGER NOT NULL,
-            rain     REAL    NOT NULL,
-            excess   REAL    NOT NULL,
-            noise    REAL    NOT NULL,
-            minutes  REAL    NOT NULL,
-            PRIMARY KEY (route_id, ts)
         )""",
         """CREATE TABLE IF NOT EXISTS Forecasts (
             route_id INTEGER NOT NULL REFERENCES Routes (id),
@@ -60,21 +53,23 @@ object Database {
             id       INTEGER PRIMARY KEY,
             company  TEXT    NOT NULL,
             ts       INTEGER NOT NULL,
-            distance REAL    NOT NULL,
-            minutes  REAL    NOT NULL,
-            surge    REAL    NOT NULL,
+            route_id INTEGER NOT NULL,
+            lat      REAL    NOT NULL,
+            lon      REAL    NOT NULL,
+            city     TEXT    NOT NULL,
+            uf       TEXT    NOT NULL,
+            level    REAL    NOT NULL,
+            expected REAL    NOT NULL,
             observed REAL    NOT NULL
         )""",
         """CREATE TABLE IF NOT EXISTS Metrics (
-            ts             INTEGER PRIMARY KEY,
-            version        INTEGER NOT NULL,
-            n              INTEGER NOT NULL,
-            price_mae      REAL    NOT NULL,
-            price_coverage REAL    NOT NULL,
-            time_mae       REAL    NOT NULL,
-            time_coverage  REAL    NOT NULL
+            ts       INTEGER PRIMARY KEY,
+            n        INTEGER NOT NULL,
+            observed INTEGER NOT NULL,
+            mae      REAL    NOT NULL,
+            mape     REAL    NOT NULL,
+            coverage REAL    NOT NULL
         )""",
-        "CREATE INDEX IF NOT EXISTS ix_prices_ts ON Prices (ts)",
         "CREATE INDEX IF NOT EXISTS ix_forecasts_ts ON Forecasts (ts)",
     )
 
@@ -92,8 +87,22 @@ object Database {
                 SCHEMA.forEach(db::execSQL)
             }
 
+            // PREVISOES, METRICAS E O HISTORICO SIMULADO ANTIGO SAO RECALCULAVEIS; AS ROTAS ESCOLHIDAS FICAM (SAO OS LUGARES JA USADOS) E PRECO INFORMADO NO FORMATO ANTIGO SAI, PORQUE ERA RELATIVO AO MERCADO SIMULADO
             override fun onUpgrade(db: SQLiteDatabase, old: Int, new: Int) {
-                TABLES.forEach { db.execSQL("DROP TABLE IF EXISTS $it") }
+                val columns = { table: String -> db.rawQuery("PRAGMA table_info($table)", null).use { cursor -> buildSet { while (cursor.moveToNext()) add(cursor.getString(1)) } } }
+                listOf("Prices", "Forecasts", "Metrics", "Legacy").forEach { db.execSQL("DROP TABLE IF EXISTS $it") }
+
+                if (!columns("Fares").containsAll(listOf("expected", "level", "city"))) db.execSQL("DROP TABLE IF EXISTS Fares")
+
+                if (columns("Routes").containsAll(ROUTE)) {
+                    db.execSQL("ALTER TABLE Routes RENAME TO Legacy")
+                    onCreate(db)
+                    db.execSQL("INSERT INTO Routes (${ROUTE.joinToString()}) SELECT ${ROUTE.joinToString()} FROM Legacy WHERE used_at > 0")
+                    db.execSQL("DROP TABLE Legacy")
+                    return
+                }
+
+                db.execSQL("DROP TABLE IF EXISTS Routes")
                 onCreate(db)
             }
 
@@ -118,5 +127,5 @@ object Database {
         }
     }
 
-    fun getRoute(cursor: Cursor) = Route(cursor.getLong(0), cursor.getString(1), cursor.getString(2), cursor.getDouble(3), cursor.getDouble(4), cursor.getDouble(5), cursor.getDouble(6), cursor.getDouble(7), cursor.getDouble(8), cursor.getDouble(9), cursor.getString(10))
+    fun getRoute(cursor: Cursor) = Route(cursor.getLong(0), cursor.getString(1), cursor.getString(2), cursor.getDouble(3), cursor.getDouble(4), cursor.getDouble(5), cursor.getDouble(6), cursor.getDouble(7), cursor.getDouble(8), cursor.getString(9), cursor.getString(10), cursor.getString(11))
 }

@@ -4,8 +4,10 @@ import os
 BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR   = os.path.join(BASE_DIR, 'data')
 DB_PATH    = os.path.join(DATA_DIR, 'surge.db')
-MODEL_PATH = os.path.join(DATA_DIR, 'model.json')
 LOG_PATH   = os.path.join(DATA_DIR, 'app.log')
+
+MARKET_PATH = os.path.join(BASE_DIR, 'Oracle', 'markets.json')    # tarifa e ritmo ajustados as medias reais da uber; o market.py regenera
+ROUTES_PATH = os.path.join(BASE_DIR, 'Oracle', 'routes.csv')      # trechos reais usados no ajuste e na validacao
 
 TZ      = 'America/Sao_Paulo'    # fuso da regiao de referencia; cada rota guarda o seu, vindo da coordenada de origem
 STEP    = 600          # resolucao da serie e do oraculo (10 min)

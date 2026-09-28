@@ -5,14 +5,16 @@ agora e a previsão das próximas 12 h em passos de 10 min (p10, p50, p90), com 
 previsto no mesmo eixo de tempo, acompanhamento em tempo real a cada 30 s, alerta sonoro a cada 10% de afastamento
 do preço da primeira consulta e calibração da tarifa pelo preço real do aplicativo.
 
-> **Os preços são simulados**, como no desktop: não existe API pública gratuita de preços da Uber ou da 99, então o
-> preço vem do oráculo que simula o mercado sobre a tabela de tarifas de cada aplicativo — e o campo *preço real no
-> app* ajusta essa tabela ao que o aplicativo cobra de verdade na sua cidade. Endereços (OpenStreetMap via Photon e
-> Nominatim), rotas (OSRM), clima (Open-Meteo) e localização (GPS do celular, ou Wi-Fi e IP) são dados reais.
+> **O preço vem de dados reais**, como no desktop: não existe API pública gratuita de preços da Uber ou da 99, então
+> o app usa as **médias reais que a própria Uber publica por trecho** (699 trechos, 219 municípios, 19 estados, coletados
+> em 26/09/2026) para estimar a tarifa sem dinâmica, o nível de preço de cada município de origem e o tempo real de
+> viagem; a 99 sai da razão típica entre as duas. O campo *preço real no app* ajusta a estimativa ao que o aplicativo
+> cobra agora. Endereços (OpenStreetMap via Photon e Nominatim), rotas (OSRM), clima (Open-Meteo) e localização (GPS do
+> celular, ou Wi-Fi e IP) são dados reais.
 
 ## Instalar
 
-1. Copie `TarifaDinamica.apk` (3,7 MB) para o celular.
+1. Copie `TarifaDinamica.apk` (1,3 MB) para o celular.
 2. Abra o arquivo e permita "instalar apps desconhecidos" para o gerenciador de arquivos quando o Android pedir.
 3. Android 8.0 ou mais novo. O app pede localização (só ao tocar em ◎) e notificações (para o tempo real e os alertas).
 
@@ -28,9 +30,11 @@ do preço da primeira consulta e calibração da tarifa pelo preço real do apli
    resumo da rota e o gráfico: preço com a faixa p10–p90, chuva prevista e **tempo de viagem previsto** em minutos
    (ou horas), com as linhas sem trânsito, moderado e intenso. Arraste o dedo no gráfico para a cruzeta, que mostra
    também a hora de chegada; a barra escolhe a janela de 1 a 12 h.
-4. **Calibrar com o preço real.** Abra a Uber ou a 99 na mesma rota, veja quanto o app cobra agora, digite o valor
-   em *preço real no app* e toque em **Calibrar**: a tarifa daquele aplicativo passa a bater com ele, e a linha
-   abaixo do campo diz qual tarifa está em uso. **0** apaga a calibração. Os preços informados ficam no celular.
+4. **Informar o preço real.** Abra a Uber ou a 99 na mesma rota, veja quanto o app cobra agora, digite o valor em
+   *preço real no app* e toque em **Calibrar**: o preço de agora passa a ser exatamente esse, a dinâmica que ele
+   revela se dissipa nas horas seguintes e a parte que persiste ajusta o nível da região; a nota sob o seletor diz
+   de onde vem o preço e quantos preços seus por perto o ajustam. **0** apaga os seus preços daquele aplicativo. Os
+   preços informados ficam no celular e o status mostra, com o tempo, quanto as previsões feitas antes erraram.
 5. O **tempo real** continua com o app fechado: uma notificação fixa mostra o preço e a variação e tem o botão
    **Parar**. A cada 10% de queda toca o arpejo ascendente e a cada 10% de alta o grave descendente (os mesmos sons do
    desktop), junto com uma notificação. O acompanhamento para sozinho 3 h depois da última consulta, para poupar
@@ -48,37 +52,39 @@ do preço da primeira consulta e calibração da tarifa pelo preço real do apli
 
 ## Mesma precisão do desktop: como é garantido
 
-O app não tem "um modelo parecido": ele lê o **mesmo `model.json`** que o desktop treina e refaz as mesmas contas.
+O app não tem "um modelo parecido": ele lê a **mesma tabela `markets.json`** que o desktop ajusta às médias reais da
+Uber e refaz as mesmas contas, na mesma ordem.
 
-- As árvores do LightGBM são lidas do texto do próprio `model_to_string` e somadas na ordem do LightGBM.
-- O oráculo reproduz o `numpy.random.default_rng` bit a bit (SeedSequence → PCG64 → ziggurat, com as tabelas do
-  numpy), então o mesmo instante dá o mesmo preço e o mesmo tempo no celular e no computador.
+- A tabela (tarifa sem dinâmica, ritmo real sobre o OSRM, incertezas e o nível de cada estado e município) vem do
+  `Oracle/markets.json` do desktop, copiada para os assets pelo `golden.py`.
+- O perfil horário, o município de origem, o estado esperado, a tarifa, a calibração pelos preços informados, a
+  normal acumulada e os quantis da mistura de chuva são reescritos linha a linha em Kotlin.
 - `golden.py` roda o código Python do desktop e grava `app/src/test/resources/golden.json`; o `ParityTest.kt`
-  confere tudo e o resultado atual é **diferença zero** em:
+  confere tudo e o resultado atual é **diferença zero** nas faixas e na série do engine:
 
 | Teste | O que compara |
 |---|---|
-| `rng` | bits crus, 2 000 normais, Poisson e uniformes em 5 sementes |
 | `holidays` | feriados ANBIMA de 2020 a 2045 |
 | `clock` | dia da semana, hora e dia local em 4 fusos, inclusive o dia sem meia-noite de 2018 |
-| `random` | acidentes, ruído de preço e de tempo do oráculo |
-| `tariff` | tarifa, dinâmica e preço dos dois aplicativos em 80 combinações de distância, tempo e demanda |
-| `fares` | tabela ajustada aos preços reais informados em 7 casos: nenhum, um, sob o piso, seis rotas, dois aplicativos, absurdo e mais de uma amostra |
-| `market` | estado do mercado, preço e tempo do oráculo em ~12 mil instantes, 4 rotas, 4 fusos e os dois aplicativos |
-| `quantiles` | soma das árvores e quantis rearranjados na chuva em 60 linhas aleatórias |
-| `model` | série p10–m90 em 192 casos (4 rotas × 2 aplicativos × 6 horários × 4 regimes, inclusive acidente) |
-| `engine` | série completa com clima interpolado e observações do dia em 32 casos |
+| `keys` | chave do município sem acento nem caixa, como o Nominatim e o IBGE escrevem diferente |
+| `profile` | congestionamento e demanda da semana local em 500 instantes |
+| `markets` | nível, ritmo, incerteza e nome do mercado em 69 origens: municípios da tabela, vizinhos, estados sem cidade perto e fora da amostra |
+| `state` | dinâmica, congestionamento, minutos e tempo sem trânsito em ~4 mil instantes, 5 rotas e 2 fusos |
+| `tariff` | tarifa, parte dos minutos e dinâmica dos dois aplicativos em 80 combinações |
+| `quantiles` | normal acumulada e 360 quantis de misturas de chuva |
+| `calibration` | nível, variância, dinâmica do preço mais recente e amostra guardada em 50 casos (nenhum, um, vários, absurdo, mais que a amostra) |
+| `model` | série p10–m90 em 120 casos (5 rotas × 2 aplicativos × 6 horários, calibrada e ancorada) |
+| `engine` | série completa com clima interpolado e preços informados em 40 casos |
 | `durations` e `spans` | tempo de viagem em minutos ou horas, com o mesmo arredondamento e o mesmo texto |
 | `starts` | ponto inicial do mapa do ◎ em 8 situações de estimativa e lugares já usados |
 | `alerts` | alertas a cada 10% de afastamento, sem repetir no mesmo patamar |
 
 ## O que é diferente do desktop, e por quê
 
-- **Não treina no celular.** O LightGBM não roda no Android, então o modelo vem treinado do desktop. O oráculo é
-  estacionário: retreinar com mais algumas horas de observação não muda a previsão (no desktop, as versões 1 e 2 do
-  modelo tiveram o mesmo erro de calibração, 2,15% e 3,50%).
-- **Worker enquanto o app está aberto ou acompanhando uma rota**, como no desktop, que só observa com a janela
-  aberta: a cada slot de 10 min observa as 5 rotas mais recentes, guarda as previsões e as consolida.
+- **A tabela vem pronta do desktop.** O ajuste às médias reais e a coleta (`market.py`) rodam no computador; o celular
+  lê o resultado nos assets. Os preços que você informa ficam no celular e ajustam o preço lá mesmo.
+- **Worker enquanto o app está aberto ou acompanhando uma rota**, como no desktop, que só roda com a janela aberta: a
+  cada slot de 10 min guarda a previsão das 5 rotas mais recentes e a compara com os preços reais informados depois.
 - **Localização pelo GPS**, que é o que o desktop não tem; sem permissão ou sem sinal ele cai para a mesma
   reserva do desktop: BeaconDB e três provedores de IP, ficando com a fonte mais precisa.
 - **Tempo real em serviço de primeiro plano**, para funcionar com a tela desligada.
@@ -87,18 +93,18 @@ O app não tem "um modelo parecido": ele lê o **mesmo `model.json`** que o desk
 
 ```
 TarifaDinamica.apk               app pronto para instalar
-golden.py                        gera o golden.json a partir do desktop e copia o model.json para os assets
-app/src/main/assets/model.json   modelo treinado pelo desktop
+golden.py                        gera o golden.json a partir do desktop e copia o markets.json para os assets
+app/src/main/assets/markets.json tabela ajustada às médias reais da Uber pelo desktop
 app/src/main/java/com/klauss/tarifa/
   Api/        Photon, Nominatim, OSRM (com espelho FOSSGIS), Open-Meteo e BeaconDB, com fila por servidor e retentativa
-  Database/   SQLite com o mesmo esquema do desktop (Prices guarda o estado do mercado; Fares, os preços reais informados)
-  Engine/     rota, clima, preço e tempo observados agora e série ancorada
-  Model/      árvores do LightGBM, rearranjo na chuva, âncora com corte de choque e faixa conformal
-  Oracle/     tarifa de cada aplicativo e mercado simulado, idênticos aos do desktop
-  Worker/     observação a cada slot e consolidação das previsões dos dois aplicativos
+  Database/   SQLite com o mesmo esquema do desktop e a mesma migração (Fares guarda os preços reais informados)
+  Engine/     rota com município de origem, clima, preço e tempo esperados agora e série calibrada
+  Model/      faixas p10–p90 e m10–m90 pela mistura de chuva, com a incerteza do nível, da dinâmica e do trânsito
+  Oracle/     tabela real, perfil horário, mercado esperado e calibração pelos preços informados, idênticos aos do desktop
+  Worker/     previsão a cada slot e acerto medido contra os preços reais informados
   Tracker/    tempo real em primeiro plano, notificação e alertas
   Interface/  tela (Interface.kt), gráfico (Chart/), campo com autocomplete (Search/) e mapa (Locator/)
-  Utils/      relógio e feriados, gerador do numpy, tabelas do ziggurat e som dos alertas
+  Utils/      relógio, feriados, formatação e som dos alertas
 app/src/test/java/com/klauss/tarifa/ParityTest.kt   paridade com o desktop
 ```
 
@@ -110,7 +116,7 @@ que fechava o app ao abrir o mapa no release).
 
 ```bash
 export JAVA_HOME=~/Android/jdk-21 ANDROID_HOME=~/Android/Sdk
-../Desktop/venv/bin/python golden.py ../Desktop/data/model.json    # depois de retreinar ou mudar o desktop
+../Desktop/venv/bin/python golden.py                               # depois de mudar o desktop ou a tabela
 ./gradlew testDebugUnitTest                                         # paridade com o desktop
 ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk TarifaDinamica.apk
 ```
@@ -123,7 +129,7 @@ export JAVA_HOME=~/Android/jdk-21 ANDROID_HOME=~/Android/Sdk
 
 ## Limitações
 
-- As mesmas do desktop: preços sintéticos, sem trânsito em tempo real gratuito, faixa que assume a previsão de chuva
-  correta e servidores públicos sem garantia de disponibilidade.
+- As mesmas do desktop: a dinâmica do instante só é conhecida quando você informa o preço, não há trânsito em tempo
+  real gratuito, a tabela envelhece se não for recoletada e os servidores públicos não têm garantia de disponibilidade.
 - Aparelhos com economia de bateria agressiva (Xiaomi, Samsung, Motorola) podem encerrar o acompanhamento com a tela
   desligada; se os alertas pararem, desative a otimização de bateria para o Tarifa Dinâmica.

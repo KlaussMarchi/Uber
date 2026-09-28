@@ -6,6 +6,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
+import java.util.stream.Collectors
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -21,6 +22,7 @@ object Api {
     const val PHOTON    = "https://photon.komoot.io/api/"
     const val REVERSE   = "https://photon.komoot.io/reverse"
     const val NOMINATIM = "https://nominatim.openstreetmap.org/search"
+    const val CITY      = "https://nominatim.openstreetmap.org/reverse"
     const val FORECAST  = "https://api.open-meteo.com/v1/forecast"
     const val BEACONDB  = "https://api.beacondb.net/v1/geolocate"
     const val AGENT     = "TarifaDinamica/1.0 (app Android)"
@@ -36,8 +38,7 @@ object Api {
     // provedores gratuitos de posicao por IP, sem cadastro; a mediana protege contra um deles errar centenas de km
     val ADDRESSES = listOf("https://get.geojs.io/v1/ip/geo.json", "https://ipwho.is/", "https://ipinfo.io/json")
 
-    val OSRM     = listOf("https://router.project-osrm.org/route/v1/driving/", "https://routing.openstreetmap.de/routed-car/route/v1/driving/")    // demonstracao do projeto e espelho da FOSSGIS com o mesmo mapa; o segundo so entra quando o primeiro falha
-    val CORRIDOR = listOf("Rodovia Amaral Peixoto", "RJ-106")
+    val OSRM = listOf("https://router.project-osrm.org/route/v1/driving/", "https://routing.openstreetmap.de/routed-car/route/v1/driving/")    // demonstracao do projeto e espelho da FOSSGIS com o mesmo mapa; o segundo so entra quando o primeiro falha
 
     // milissegundos entre requisicoes por servidor, conforme as politicas de uso publicas
     val INTERVALS = mapOf("nominatim.openstreetmap.org" to 1100L, "router.project-osrm.org" to 1100L, "routing.openstreetmap.de" to 1100L, "photon.komoot.io" to 300L)
@@ -134,12 +135,12 @@ object Api {
 
     // POSICAO PELO IP: A MEDIANA DOS PROVEDORES QUE RESPONDEREM, COM A DISPERSAO ENTRE ELES COMO ERRO DECLARADO
     fun getAddress(): Place? {
-        val found = ADDRESSES.parallelStream().map(::getCoords).toList().filterNotNull()
+        val found = ADDRESSES.parallelStream().map(::getCoords).collect(Collectors.toList()).filterNotNull()    // stream.tolist so existe a partir do android 14
 
         if (found.isEmpty()) return null
 
-        val lat    = Oracle.getMedian(found.map { it.first })
-        val lon    = Oracle.getMedian(found.map { it.second })
+        val lat    = getMedian(found.map { it.first })
+        val lon    = getMedian(found.map { it.second })
         val spread = found.maxOf { getDistance(lat, lon, it.first, it.second) } * 1000
         return Place("", lat, lon, max(spread, IP_ERROR))
     }
@@ -170,28 +171,24 @@ object Api {
         return Place(parts.filter(String::isNotEmpty).distinct().joinToString(", "), coords.getDouble(1), coords.getDouble(0))
     }
 
-    // ROTA DE CARRO NO OSRM (COM O ESPELHO COMO RESERVA): DISTANCIA KM, DURACAO MIN E FRACAO NA RJ-106; PONTO LONGE DE QUALQUER VIA NAO TEM ROTA
-    fun getRoute(src: Place, dst: Place): Triple<Double, Double, Double>? {
+    // ROTA DE CARRO NO OSRM (COM O ESPELHO COMO RESERVA): DISTANCIA KM E TEMPO SEM TRANSITO MIN; PONTO LONGE DE QUALQUER VIA (ILHA, MAR) NAO TEM ROTA
+    fun getRoute(src: Place, dst: Place): Pair<Double, Double>? {
         val path = "${src.lon},${src.lat};${dst.lon},${dst.lat}"
-        val res  = OSRM.firstNotNullOfOrNull { get("$it$path?overview=false&steps=true") as? JSONObject } ?: return null
+        val res  = OSRM.firstNotNullOfOrNull { get("$it$path?overview=false") as? JSONObject } ?: return null
         val waypoints = res.optJSONArray("waypoints") ?: return null
 
         if (res.optString("code") != "Ok" || (res.optJSONArray("routes")?.length() ?: 0) == 0 || (0 until waypoints.length()).any { waypoints.getJSONObject(it).getDouble("distance") > MAX_SNAP }) return null
 
         val route = res.getJSONArray("routes").getJSONObject(0)
-        val legs  = route.getJSONArray("legs")
-        var onCorridor = 0.0
+        return route.getDouble("distance") / 1000 to route.getDouble("duration") / 60
+    }
 
-        for (i in 0 until legs.length()) {
-            val steps = legs.getJSONObject(i).getJSONArray("steps")
-
-            for (k in 0 until steps.length()) {
-                val step = steps.getJSONObject(k)
-                if (CORRIDOR.any { "${getText(step, "name")} ${getText(step, "ref")}".contains(it) }) onCorridor += step.getDouble("distance")
-            }
-        }
-
-        return Triple(route.getDouble("distance") / 1000, route.getDouble("duration") / 60, onCorridor / max(route.getDouble("distance"), 1.0))
+    // MUNICIPIO E ESTADO DE UMA COORDENADA PELA FRONTEIRA ADMINISTRATIVA DO OSM (NOMINATIM NO NIVEL DE CIDADE); A MEDIA REAL DA UBER E POR MUNICIPIO DE ORIGEM
+    fun getCity(lat: Double, lon: Double): Pair<String, String>? {
+        val res  = get("$CITY?lat=$lat&lon=$lon&format=jsonv2&zoom=10") as? JSONObject ?: return null
+        val code = res.optJSONObject("address")?.let { getText(it, "ISO3166-2-lvl4") }.orEmpty()
+        val name = getText(res, "name")
+        return if (name.isNotEmpty() && code.startsWith("BR-")) name to code.substring(3) else null
     }
 
     // FUSO IANA DE UMA COORDENADA; O BRASIL TEM QUATRO FUSOS E A DEMANDA SEGUE A HORA LOCAL DA ROTA

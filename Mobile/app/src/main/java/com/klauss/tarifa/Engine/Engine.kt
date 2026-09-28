@@ -1,13 +1,15 @@
 package com.klauss.tarifa
 
+import android.content.Context
 
-// SERIE DE UMA CONSULTA: INSTANTES (O PRIMEIRO E AGORA), CHUVA E CHANCE PREVISTAS, QUANTIS DE PRECO E TEMPO E O ESTADO DO MERCADO AGORA
-class Series(val ts: LongArray, val rain: DoubleArray, val probability: DoubleArray, val bands: Map<String, DoubleArray>, val price: Double, val minutes: Double, val excess: Double, val noise: Double)
+
+// SERIE DE UMA CONSULTA: INSTANTES (O PRIMEIRO E AGORA), CHUVA E CHANCE PREVISTAS, QUANTIS DE PRECO E TEMPO E O PRECO, O TEMPO E A DINAMICA ESPERADOS AGORA
+class Series(val ts: LongArray, val rain: DoubleArray, val probability: DoubleArray, val bands: Map<String, DoubleArray>, val price: Double, val minutes: Double, val surge: Double)
 
 // RESPOSTA DA CONSULTA COMPLETA PARA A TELA: ENDERECOS VALIDADOS, ROTA E SERIE, OU O MOTIVO DA FALHA
 class Quote(val src: Place? = null, val dst: Place? = null, val route: Route? = null, val series: Series? = null, val error: String? = null)
 
-// NUCLEO DA CONSULTA: ROTA, CLIMA, PRECO OBSERVADO AGORA E SERIE DE 12 H ANCORADA NAS OBSERVACOES DE HOJE; USADO PELA TELA, PELO WORKER E PELO ACOMPANHAMENTO
+// NUCLEO DA CONSULTA: ROTA, CLIMA, PRECO E TEMPO ESPERADOS AGORA E SERIE DE 12 H CALIBRADA PELOS PRECOS INFORMADOS; USADO PELA TELA, PELO WORKER E PELO ACOMPANHAMENTO
 object Engine {
     const val WEATHER_TTL  = 600_000L    // ms de validade da previsao do tempo em cache
     const val MIN_DISTANCE = 0.3         // km abaixo do qual origem e destino sao o mesmo ponto
@@ -15,10 +17,15 @@ object Engine {
 
     val weather = HashMap<String, Pair<Long, Weather>>()
 
-    // TARIFA DE CADA APLICATIVO A PARTIR DOS PRECOS REAIS JA INFORMADOS; SEM NENHUM, VALE A TABELA PUBLICADA
-    fun setup() = Oracle.update(Database.get("SELECT company, distance, minutes, surge, observed FROM Fares ORDER BY ts") { Ride(it.getString(0), it.getDouble(1), it.getDouble(2), it.getDouble(3), it.getDouble(4)) })
+    // TABELA AJUSTADA AS MEDIAS REAIS (ASSETS) E PRECOS JA INFORMADOS; A TELA E O ACOMPANHAMENTO CHAMAM, E O QUE SUBIR PRIMEIRO CARREGA
+    fun setup(context: Context) {
+        if (!Oracle.ready()) Oracle.load(context.assets.open("markets.json").bufferedReader().use { it.readText() })
+        update()
+    }
 
-    // ROTA COM CACHE NO BANCO E FUSO DA ORIGEM; MARCA O USO PORQUE O WORKER OBSERVA AS ROTAS MAIS RECENTES
+    fun update() = Oracle.update(Database.get("SELECT company, ts, lat, lon, city, uf, level, expected, observed FROM Fares ORDER BY ts, id") { Ride(it.getString(0), it.getLong(1), it.getDouble(2), it.getDouble(3), it.getString(4), it.getString(5), it.getDouble(6), it.getDouble(7), it.getDouble(8)) })
+
+    // ROTA COM CACHE NO BANCO, FUSO E MUNICIPIO DA ORIGEM; MARCA O USO PORQUE O WORKER OBSERVA AS ROTAS MAIS RECENTES
     fun getRoute(src: Place, dst: Place): Route? {
         val key = arrayOf<Any>(getRound(src.lat!!, 5), getRound(src.lon!!, 5), getRound(dst.lat!!, 5), getRound(dst.lon!!, 5))
 
@@ -26,14 +33,20 @@ object Engine {
             val res  = Api.getRoute(src, dst)
             val zone = res?.let { Api.getZone(src.lat, src.lon) }
             if (res == null || zone == null || res.first < MIN_DISTANCE) return null
-            Database.set("INSERT OR IGNORE INTO Routes (origin, destination, o_lat, o_lon, d_lat, d_lon, distance, duration, corridor, tz, used_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)", listOf(arrayOf(src.label, dst.label, *key, res.first, res.second, res.third, zone)))
+            Database.set("INSERT OR IGNORE INTO Routes (origin, destination, o_lat, o_lon, d_lat, d_lon, distance, duration, tz, used_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)", listOf(arrayOf(src.label, dst.label, *key, res.first, res.second, zone)))
         }
 
         Database.set("UPDATE Routes SET used_at = ? $WHERE", listOf(arrayOf(System.currentTimeMillis() / 1000, *key)))
-        return Database.get("SELECT id, origin, destination, o_lat, o_lon, d_lat, d_lon, distance, duration, corridor, tz FROM Routes $WHERE", *key, fn = Database::getRoute).firstOrNull()
+        val route = Database.get("SELECT ${Database.COLUMNS} FROM Routes $WHERE", *key, fn = Database::getRoute).firstOrNull() ?: return null
+
+        if (route.city.isNotEmpty()) return route
+
+        val place = Api.getCity(route.oLat, route.oLon) ?: return route    // sem o municipio vale a vizinhanca; a proxima consulta tenta de novo
+        Database.set("UPDATE Routes SET city = ?, uf = ? WHERE id = ?", listOf(arrayOf<Any>(place.first, place.second, route.id)))
+        return route.copy(city = place.first, uf = place.second)
     }
 
-    // LUGARES QUE O USUARIO JA CONFIRMOU, DOS MAIS RECENTES; ROTA COM USED_AT 0 NUNCA FOI ESCOLHIDA (COMO AS DO BOOTSTRAP DO DESKTOP) E FICA DE FORA
+    // LUGARES QUE O USUARIO JA CONFIRMOU, DOS MAIS RECENTES
     fun getPlaces(limit: Int = 5) = Database.get("SELECT label, lat, lon FROM (SELECT origin AS label, o_lat AS lat, o_lon AS lon, used_at FROM Routes UNION ALL SELECT destination, d_lat, d_lon, used_at FROM Routes) WHERE used_at > 0 ORDER BY used_at DESC") { Place(it.getString(0), it.getDouble(1), it.getDouble(2)) }.distinctBy { it.label }.take(limit)
 
     // PREVISAO DE CHUVA POR CELULA DE ~1 KM COM CACHE CURTO; SE A API FALHA, SEGUE COM A ULTIMA PREVISAO RECEBIDA
@@ -48,47 +61,46 @@ object Engine {
         return res
     }
 
-    // SERIE A PARTIR DO CLIMA E DAS OBSERVACOES DE HOJE: A LINHA 0 E O INSTANTE EXATO, AS DEMAIS SAO OS SLOTS DE 10 MIN ATE 12 H
-    fun getSeries(route: Route, now: Long, weather: Weather, today: Obs, company: String): Series? {
+    // CHUVA E CHANCE NA GRADE DA SERIE: A LINHA 0 E O INSTANTE EXATO, AS DEMAIS SAO OS SLOTS DE 10 MIN ATE 12 H
+    fun getGrid(now: Long, weather: Weather): Triple<LongArray, DoubleArray, DoubleArray>? {
         val ts = longArrayOf(now) + LongArray((HORIZON / STEP).toInt()) { (now / STEP + 1 + it) * STEP }
 
         // previsao em cache que ja nao cobre o horizonte viraria chuva constante no fim da serie
-        if (weather.ts.last() < ts.last() || !Model.ready()) return null
+        if (weather.ts.last() < ts.last()) return null
 
-        val rain   = DoubleArray(ts.size) { getInterp(ts[it].toDouble(), weather.ts, weather.rain) }
-        val chance = DoubleArray(ts.size) { getInterp(ts[it].toDouble(), weather.ts, weather.probability) }
-        val state  = Oracle.getState(route, longArrayOf(now), doubleArrayOf(rain[0]))
-        val price  = Oracle.getPrice(route.distance, state.minutes[0], state.excess[0], state.noise[0], company)
-        val obs    = Obs(today.ts + now, today.rain + rain[0], mapOf("price" to today.values.getValue("price") + price, "minutes" to today.values.getValue("minutes") + state.minutes[0]))
-        val bands  = Model.get(route, ts, rain, obs, company) ?: return null
-        return Series(ts, rain, chance, bands, price, state.minutes[0], state.excess[0], state.noise[0])
+        return Triple(ts, DoubleArray(ts.size) { getInterp(ts[it].toDouble(), weather.ts, weather.rain) }, DoubleArray(ts.size) { getInterp(ts[it].toDouble(), weather.ts, weather.probability) })
+    }
+
+    fun getSeries(route: Route, now: Long, weather: Weather, company: String): Series? {
+        val (ts, rain, chance) = getGrid(now, weather) ?: return null
+        val bands  = Model.get(route, ts, rain, chance, company, Oracle.getCalibration(route, company, now))
+        val excess = Oracle.getState(route, longArrayOf(now), doubleArrayOf(rain[0])).excess[0]
+        return Series(ts, rain, chance, bands, bands.getValue("p50")[0], bands.getValue("m50")[0], Oracle.getSurge(excess, company))
     }
 
     fun get(route: Route, company: String, now: Long = System.currentTimeMillis() / 1000): Series? {
-        val weather  = getWeather(route.oLat, route.oLon) ?: return null
-        val midnight = getMidnight(getClock(longArrayOf(now), route.tz).day[0], route.tz)
-        val rows     = Database.get("SELECT ts, rain, excess, noise, minutes FROM Prices WHERE route_id = ? AND ts >= ? AND ts < ? ORDER BY ts", route.id, midnight, now / STEP * STEP) { it.getLong(0) to DoubleArray(4) { k -> it.getDouble(k + 1) } }
-        val price    = DoubleArray(rows.size) { Oracle.getPrice(route.distance, rows[it].second[3], rows[it].second[1], rows[it].second[2], company) }
-        val today    = Obs(LongArray(rows.size) { rows[it].first }, DoubleArray(rows.size) { rows[it].second[0] }, mapOf("price" to price, "minutes" to DoubleArray(rows.size) { rows[it].second[3] }))
-        return getSeries(route, now, weather, today, company)
+        val weather = getWeather(route.oLat, route.oLon) ?: return null
+        return getSeries(route, now, weather, company)
     }
 
-    // PRECO REAL LIDO NO APLICATIVO: GUARDA A OBSERVACAO COM O ESTADO DO MERCADO DAQUELE INSTANTE E REAJUSTA A TARIFA; ZERO APAGA A CALIBRACAO DO APLICATIVO
+    // PRECO REAL LIDO NO APLICATIVO: GUARDA COM O PRECO CENTRAL QUE O APP MOSTRARIA SEM CALIBRACAO NAQUELE INSTANTE E RECALIBRA; ZERO APAGA OS PRECOS DO APLICATIVO
     fun setFare(route: Route, company: String, observed: Double, now: Long = System.currentTimeMillis() / 1000): Int {
         if (observed <= 0) {
             Database.set("DELETE FROM Fares WHERE company = ?", listOf(arrayOf(company)))
         } else {
-            val series = get(route, company, now) ?: return -1
-            Database.set("INSERT INTO Fares (company, ts, distance, minutes, surge, observed) VALUES (?, ?, ?, ?, ?, ?)", listOf(arrayOf<Any?>(company, now, route.distance, series.minutes, Oracle.getSurge(series.excess, series.noise, company), observed)))
+            val (_, rain, chance) = getGrid(now, getWeather(route.oLat, route.oLon) ?: return -1) ?: return -1
+            val anchor   = Oracle.getAnchor(route, now)
+            val expected = Model.getBands(route, longArrayOf(now), doubleArrayOf(rain[0]), doubleArrayOf(chance[0]), company, anchor).getValue("p50")[0]
+            Database.set("INSERT INTO Fares (company, ts, route_id, lat, lon, city, uf, level, expected, observed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", listOf(arrayOf<Any?>(company, now, route.id, route.oLat, route.oLon, route.city, route.uf, anchor.market.level, expected, observed)))
         }
 
-        setup()
+        update()
         return Database.get("SELECT COUNT(*) FROM Fares WHERE company = ?", company) { it.getInt(0) }.first()
     }
 
     // CONSULTA COMPLETA: VALIDA OS ENDERECOS, TRACA A ROTA E PREVE; QUANDO UMA ETAPA FALHA DEVOLVE O MOTIVO PARA A TELA
     fun getQuote(src: Place, dst: Place, company: String): Quote {
-        if (!Model.ready()) return Quote(error = "Modelo em preparação: a previsão aparece assim que ele terminar de carregar.")
+        if (!Oracle.ready()) return Quote(error = "Carregando a tabela de preços; tente de novo em instantes.")
 
         val origin = if (src.lat != null) src else Api.geocode(src.label) ?: return Quote(error = "Origem não encontrada. Escolha uma das sugestões da lista.")
         val destination = if (dst.lat != null) dst else Api.geocode(dst.label) ?: return Quote(error = "Destino não encontrado. Escolha uma das sugestões da lista.")
